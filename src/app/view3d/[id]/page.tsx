@@ -20,6 +20,8 @@ export default function View3DPage() {
           allowFullScreen
         />
       </div>
+
+      
     </main>
   );
 }
