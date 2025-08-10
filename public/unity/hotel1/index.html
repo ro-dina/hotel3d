@@ -104,21 +104,28 @@
 
       document.querySelector("#unity-loading-bar").style.display = "block";
 
+      // グローバルスコープで unityInstance を宣言
+      var unityInstance = null;
+
       var script = document.createElement("script");
       script.src = loaderUrl;
       script.onload = () => {
         createUnityInstance(canvas, config, (progress) => {
           document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-
-              }).catch((message) => {
-                alert(message);
-              });
-            };
+        }).then((instance) => {
+          unityInstance = instance;
+          document.querySelector("#unity-loading-bar").style.display = "none";
+          document.querySelector("#unity-fullscreen-button").onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+          // URLクエリから hotelId を取得し SendMessage する
+          const urlParams = new URLSearchParams(window.location.search);
+          const hotelId = urlParams.get('id') || "1";
+          unityInstance.SendMessage("HotelManager", "SetHotel", hotelId);
+        }).catch((message) => {
+          alert(message);
+        });
+      };
 
       document.body.appendChild(script);
 
