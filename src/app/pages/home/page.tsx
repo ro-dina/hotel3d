@@ -1,19 +1,26 @@
 'use client';
-import React, { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Hotel } from "@/types/Hotel";
 import { HOTELS } from "@/data/mockHotels";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 
 export default function HomePage() {
-  const searchParams = useSearchParams();
+  const [regionParam, setRegionParam] = useState<string>("");
+  const [checkInParam, setCheckInParam] = useState<string>("");
+  const [checkOutParam, setCheckOutParam] = useState<string>("");
+  const [guestsParam, setGuestsParam] = useState<string>("");
+
+  useEffect(() => {
+    // クライアント側でクエリを取得（SSR回避）
+    const sp = new URLSearchParams(window.location.search);
+    setRegionParam(sp.get("region") ?? "");
+    setCheckInParam(sp.get("checkIn") ?? "");
+    setCheckOutParam(sp.get("checkOut") ?? "");
+    setGuestsParam(sp.get("guests") ?? "");
+  }, []);
   const router = useRouter();
-  const regionParam = searchParams.get("region") || "";
-  const checkInParam = searchParams.get("checkIn") || "";
-  const checkOutParam = searchParams.get("checkOut") || "";
-  const guestsParam = searchParams.get("guests") || "";
 
   // ==== Filters (左サイドバー) ====
   const [priceMin, setPriceMin] = useState<number | "">("");
