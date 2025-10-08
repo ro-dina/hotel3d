@@ -2,7 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { mockHotels } from "@/data/mockHotels";
+import { HOTELS } from "@/data/mockHotels";
 import type { Hotel } from "@/types/Hotel";
 import Image from "next/image";
 import { ReservationDraft } from "@/types/Hotel";
@@ -19,7 +19,7 @@ export default function ReservePage() {
   const checkOutQ = params.get("checkOut") || "";
   const guestsQ = Number(params.get("guests") || 2);
 
-  const hotel: Hotel | undefined = mockHotels.find(h => String(h.id) === String(id));
+  const hotel: Hotel | undefined = HOTELS.find(h => String(h.id) === String(id));
 
   const [form, setForm] = useState<ReservationDraft>({
     hotelId: Number(id),
