@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, {  useMemo, useState } from "react";
 import Link from "next/link";
 import { Hotel } from "@/types/Hotel";
-import { mockHotels } from "@/data/mockHotels";
+import { HOTELS } from "@/data/mockHotels";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -36,7 +36,7 @@ export default function HomePage() {
     breakfast !== "";
 
   const filteredHotels: Hotel[] = useMemo(() => {
-    let list = mockHotels;
+    let list = HOTELS;
 
     // 地域フィルタ
     if (regionParam.trim() !== "") {

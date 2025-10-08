@@ -11,6 +11,8 @@ export type Hotel = {
   type?: "hotel" | "minpaku";
   /** 任意: 朝食の有無 */
   breakfast?: boolean;
+  /** 任意: 都道府県（自由入力可） */
+  pref?: string;
 };
 
 export type ReservationDraft = {

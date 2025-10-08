@@ -4,14 +4,14 @@
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { mockHotels } from "@/data/mockHotels";
+import { HOTELS } from "@/data/mockHotels";
 import { Hotel } from "@/types/Hotel";
 
 export default function HotelDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const hotel: Hotel | undefined = mockHotels.find(h => String(h.id) === String(id));
+  const hotel: Hotel | undefined = HOTELS.find(h => String(h.id) === String(id));
   if (!hotel) {
     return (
       <main className="max-w-5xl mx-auto p-4">
