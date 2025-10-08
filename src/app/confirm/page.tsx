@@ -1,9 +1,5 @@
 import { Suspense } from 'react';
-import dynamic from 'next/dynamic';
-
-const ConfirmClient = dynamic(() => import('./ConfirmClient'), {
-  ssr: false,
-});
+import ConfirmClient from './ConfirmClient';
 
 export default function Page() {
   return (
