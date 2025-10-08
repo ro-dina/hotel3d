@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function ConfirmPage() {
+export default function ConfirmClient() {
   const params = useSearchParams();
   const router = useRouter();
-  const rid = params.get("rid");
+  const rid = params.get('rid');
 
   return (
     <main className="bg-gray-100 min-h-screen">
@@ -24,10 +24,16 @@ export default function ConfirmPage() {
           <p>予約番号が見つかりませんでした。</p>
         )}
         <div className="flex gap-3">
-          <button onClick={() => router.push("/")} className="px-4 py-2 rounded border">
+          <button
+            onClick={() => router.push('/')}
+            className="px-4 py-2 rounded border"
+          >
             トップへ
           </button>
-          <button onClick={() => router.push("/pages/home")} className="px-4 py-2 rounded border">
+          <button
+            onClick={() => router.push('/pages/home')}
+            className="px-4 py-2 rounded border"
+          >
             ホテル検索に戻る
           </button>
         </div>
