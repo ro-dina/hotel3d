@@ -61,7 +61,7 @@ export default function HomePage() {
   // --- 地図の位置（ズーム/中心） ---
   const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>({
     coordinates: [137, 37],
-    zoom: 1.2,
+    zoom: 1,
   });
 
   // --- public/maps/japan.json (TopoJSON) を読み込み、都道府県GeoJSONへ変換 ---
@@ -70,9 +70,15 @@ export default function HomePage() {
     fetch("/maps/japan.json")
       .then((res) => res.json())
       .then((topology) => {
-        // NOTE: あなたの TopoJSON 内のオブジェクト名に合わせて `objects.pref` を調整してください
-        const geo = topojsonFeature(topology, topology.objects.pref) as unknown as FeatureCollection;
-setPrefGeo(geo);
+        // N03 2024 市区町村 TopoJSON を FeatureCollection に変換（オブジェクト名を自動検出）
+        const objName =
+          topology.objects && "N03-20240101" in topology.objects
+            ? "N03-20240101"
+            : Object.keys(topology.objects)[0];
+        const geo = topojsonFeature(
+          topology,
+          topology.objects[objName]
+        ) as unknown as FeatureCollection;
         setPrefGeo(geo);
       })
       .catch((e) => {
@@ -145,7 +151,7 @@ setPrefGeo(geo);
             projection="geoMercator"
             projectionConfig={{
               center: [137, 37],
-              scale: 1400,
+              scale: 900,
             }}
             width={640}
             height={420}
@@ -177,21 +183,21 @@ setPrefGeo(geo);
                             default: {
                               fill: isSelected ? "#4f46e5" : "#E0E7FF",
                               stroke: "#6366F1",
-                              strokeWidth: 0.5,
+                              strokeWidth: 0.4,
                               outline: "none",
                               cursor: "pointer",
                             },
                             hover: {
                               fill: "#A5B4FC",
                               stroke: "#4338CA",
-                              strokeWidth: 0.8,
+                              strokeWidth: 0.6,
                               outline: "none",
                               cursor: "pointer",
                             },
                             pressed: {
                               fill: "#818CF8",
                               stroke: "#3730A3",
-                              strokeWidth: 1,
+                              strokeWidth: 0.8,
                               outline: "none",
                               cursor: "pointer",
                             },
