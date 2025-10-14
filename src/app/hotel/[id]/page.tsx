@@ -1,22 +1,19 @@
 // src/app/hotel/[id]/page.tsx
-"use client";
 
-import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { HOTELS } from "@/data/mockHotels";
 import { Hotel } from "@/types/Hotel";
 
-export default function HotelDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
+export default function HotelDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
 
   const hotel: Hotel | undefined = HOTELS.find(h => String(h.id) === String(id));
   if (!hotel) {
     return (
       <main className="max-w-5xl mx-auto p-4">
         <p className="text-gray-700">ホテルが見つかりませんでした。</p>
-        <button onClick={() => router.back()} className="mt-2 underline text-blue-600">戻る</button>
+        <Link href="/pages/home" className="mt-2 underline text-blue-600">戻る</Link>
       </main>
     );
   }
@@ -26,7 +23,7 @@ export default function HotelDetailPage() {
       <div className="max-w-5xl mx-auto p-4">
         {/* パンくず / 戻る */}
         <div className="text-sm text-gray-600 mb-3">
-          <button onClick={() => router.back()} className="hover:underline">← 検索結果に戻る</button>
+          <Link href="/pages/home" className="hover:underline">← 検索結果に戻る</Link>
         </div>
 
         {/* ヘッダー */}
@@ -120,4 +117,9 @@ export default function HotelDetailPage() {
       </div>
     </main>
   );
+}
+
+// Pre-generate static paths for all hotels
+export async function generateStaticParams() {
+  return HOTELS.map((h) => ({ id: String(h.id) }));
 }
