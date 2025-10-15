@@ -6,17 +6,11 @@ import Link from "next/link";
 import { HOTELS } from "@/data/mockHotels";
 import { Hotel } from "@/types/Hotel";
 
-// Next.js 15: params が Promise になるケースに対応するための型とガード
+// Next.js 15: params は Promise で渡される想定
 type RouteParams = { id: string };
-function isPromise<T>(v: unknown): v is Promise<T> {
-  return typeof v === "object" && v !== null && typeof (v as { then?: unknown }).then === "function";
-}
 
-export default async function HotelDetailPage(
-  props: { params: RouteParams } | { params: Promise<RouteParams> }
-) {
-  const raw = (props as { params: unknown }).params;
-  const { id } = isPromise<RouteParams>(raw) ? await raw : (raw as RouteParams);
+export default async function HotelDetailPage({ params }: { params: Promise<RouteParams> }) {
+  const { id } = await params;
 
   const hotel: Hotel | undefined = HOTELS.find(h => String(h.id) === String(id));
   if (!hotel) {
