@@ -1,12 +1,19 @@
 /** @type {import('next').NextConfig} */
-const isGH = process.env.GITHUB_REPOSITORY || process.env.GITHUB_ACTIONS;
-const repo = 'hotel3d'; // ←リポジトリ名に変更
+const nextConfig = {
+  reactStrictMode: true,
 
-module.exports = {
-  output: 'export',            // ← これで export モード
-  images: { unoptimized: true }, // 画像最適化を無効化（静的ホスティング向け）
-  // GitHub Pages のサブパス配信に対応
-  basePath: isGH ? `/${repo}` : '',
-  assetPrefix: isGH ? `/${repo}/` : undefined,
-  trailingSlash: true,         // 404回避に有利（/path -> /path/）
+  // 画像最適化はデフォルト（true）でOK。外部ドメインを使うなら images.domains を追記。
+  images: {
+    // unoptimized: false, // ←明示不要（デフォルト最適化ON）
+    // domains: ['example.com'], // 必要なら
+  },
+
+  // SSR では不要。GitHub Pages（静的）用の設定は削除
+  // basePath: '',
+  // assetPrefix: undefined,
+
+  // trailingSlash は任意（SSRでは必須ではない）
+  // trailingSlash: false,
 };
+
+module.exports = nextConfig;

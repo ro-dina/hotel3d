@@ -8,12 +8,16 @@ export async function generateStaticParams() {
 
 type RouteParams = { id: string };
 
-export default async function ReservePage({
-  params,
-}: {
-  params: Promise<RouteParams>;
-}) {
-  const { id } = await params;
+export default function ReservePage(props: unknown) {
+  const { params, searchParams } = props as {
+    params: RouteParams;
+    searchParams?: { [key: string]: string | string[] | undefined };
+  };
+
+  const { id } = params;
   const hotel: Hotel | undefined = HOTELS.find(h => String(h.id) === id);
-  return <ReserveClient id={id} hotel={hotel} searchParams={{}} />;
+
+  return (
+    <ReserveClient id={id} hotel={hotel} searchParams={searchParams ?? {}} />
+  );
 }

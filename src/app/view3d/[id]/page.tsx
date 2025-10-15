@@ -6,12 +6,9 @@ export async function generateStaticParams() {
 
 type RouteParams = { id: string };
 
-export default async function View3DPage({
-  params,
-}: {
-  params: Promise<RouteParams>;
-}) {
-  const { id } = await params;
+export default async function Page(props: unknown) {
+  const { params } = props as { params: RouteParams };
+  const { id } = params;
 
   // 将来: ホテルに紐づく Unity 空間内座標をサーバから取得する想定
   const warp = { x: 10, y: 0, z: 5 };
