@@ -8,12 +8,9 @@ export async function generateStaticParams() {
 
 type RouteParams = { id: string };
 
-export default async function HotelDetailPage({
-  params,
-}: {
-  params: Promise<RouteParams>;
-}) {
-  const { id } = await params;
+export default async function HotelDetailPage(props: unknown) {
+  const { params } = props as { params: RouteParams };
+  const { id } = params;
   const hotel: Hotel | undefined = HOTELS.find(h => String(h.id) === id);
 
   if (!hotel) {

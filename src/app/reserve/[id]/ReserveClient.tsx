@@ -1,11 +1,12 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import type { Hotel, ReservationDraft } from "@/types/Hotel";
 
 const DRAFT_KEY = "reservation:draft";
+type SearchParams = { [key: string]: string | string[] | undefined };
 
 export default function ReserveClient({
   id,
@@ -14,10 +15,9 @@ export default function ReserveClient({
 }: {
   id: string;
   hotel?: Hotel;
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams?: SearchParams;
 }) {
   const router = useRouter();
-  const sp = useSearchParams();
 
   const initial = useMemo(
     () => ({
@@ -41,14 +41,15 @@ export default function ReserveClient({
   });
 
   useEffect(() => {
-    const next = {
-      checkIn: sp.get("checkIn") || initial.checkIn,
-      checkOut: sp.get("checkOut") || initial.checkOut,
-      guests: Number(sp.get("guests") || initial.guests),
-    };
-    setForm((prev) => ({ ...prev, ...next }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sp]);
+    if (!searchParams) return;
+    setForm((prev) => ({
+      ...prev,
+      checkIn: (searchParams.checkIn as string) ?? prev.checkIn,
+      checkOut: (searchParams.checkOut as string) ?? prev.checkOut,
+      guests: Number((searchParams.guests as string) ?? prev.guests),
+    }));
+    
+  }, [searchParams]);
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
