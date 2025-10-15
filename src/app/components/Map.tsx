@@ -69,16 +69,17 @@ const MemoGeographies: React.FC<{
 MemoGeographies.displayName = "MemoGeographies";
 
 export default function JapanMap(props: Partial<MapProps>) {
-  const pref = props.pref;
   const setPref = props.setPref ?? (() => {});
-  const position = props.position ?? { coordinates: [139, 37.5] as [number, number], zoom: 1 };
-  const setPosition = props.setPosition ?? (() => {});
+  const position = useMemo(() => props.position ?? { coordinates: [139, 37.5] as [number, number], zoom: 1 }, [props.position]);
+  const setPositionFn = useMemo(() => props.setPosition ?? (() => {}), [props.setPosition]);
   const level: "regions" | "prefecture" | "japan" = props.level ?? "regions";
   const height = props.height ?? 420;
   const center = (props.center ?? [139, 37.5]) as [number, number];
 
   const [geo, setGeo] = useState<FeatureCollection<Geometry, JPProps> | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const positionRef = useRef(position);
+  useEffect(() => { positionRef.current = position; }, [position]);
 
   // choose file by level
   const file = useMemo(() => {
@@ -117,7 +118,10 @@ export default function JapanMap(props: Partial<MapProps>) {
           const convertedUnknown = topojsonFeature(topo, topo.objects[objName]);
 
           const isFC = (x: unknown): x is FeatureCollection<Geometry, JPProps> =>
-            !!x && typeof x === "object" && (x as { type?: string }).type === "FeatureCollection" && Array.isArray((x as any).features);
+            !!x && typeof x === "object" &&
+            (x as { type?: string }).type === "FeatureCollection" &&
+            "features" in (x as Record<string, unknown>) &&
+            Array.isArray((x as { features?: unknown }).features);
 
           if (isFC(convertedUnknown)) {
             fc = convertedUnknown as FeatureCollection<Geometry, JPProps>;
@@ -147,7 +151,12 @@ export default function JapanMap(props: Partial<MapProps>) {
       if (e.ctrlKey) {
         e.preventDefault();
         const dz = -e.deltaY * 0.0015;
-        setPosition({ ...position, zoom: Math.max(1, Math.min(5, position.zoom + dz)) });
+        const prev = positionRef.current;
+        const next = {
+          ...prev,
+          zoom: Math.max(1, Math.min(5, prev.zoom + dz)),
+        } as typeof prev;
+        setPositionFn(next);
       }
     };
     const onGesture = (e: Event) => { e.preventDefault(); };
@@ -162,7 +171,7 @@ export default function JapanMap(props: Partial<MapProps>) {
       window.removeEventListener("gesturechange", gl as EventListener);
       window.removeEventListener("gestureend", gl as EventListener);
     };
-  }, [position.zoom, setPosition]);
+  }, [setPositionFn]);
 
   return (
     <div
@@ -180,15 +189,15 @@ export default function JapanMap(props: Partial<MapProps>) {
         <ZoomableGroup
           center={position.coordinates}
           zoom={position.zoom}
-          onMoveEnd={(pos: { coordinates: [number, number]; zoom: number }) => setPosition(pos)}
+          onMoveEnd={(pos: { coordinates: [number, number]; zoom: number }) => setPositionFn(pos)}
         >
           {geo ? (
             <>
               <MemoGeographies
                 geography={geo}
                 level={level}
-                setPosition={setPosition}
-                onPick={(name) => { if (props.setPref && name) props.setPref(name); }}
+                setPosition={setPositionFn}
+                onPick={(name) => { if (name) setPref(name); }}
               />
               {/* Regional border overlay */}
               {level === "regions" && (
@@ -241,14 +250,14 @@ export default function JapanMap(props: Partial<MapProps>) {
         <button
           type="button"
           className="rounded-md bg-white/90 px-3 py-1 text-sm shadow ring-1 ring-black/10 hover:bg-white"
-          onClick={() => setPosition({ ...position, zoom: Math.min(5, position.zoom + 0.5) })}
+          onClick={() => setPositionFn({ ...position, zoom: Math.min(5, position.zoom + 0.5) })}
         >
           ＋
         </button>
         <button
           type="button"
           className="rounded-md bg-white/90 px-3 py-1 text-sm shadow ring-1 ring-black/10 hover:bg-white"
-          onClick={() => setPosition({ ...position, zoom: Math.max(1, position.zoom - 0.5) })}
+          onClick={() => setPositionFn({ ...position, zoom: Math.max(1, position.zoom - 0.5) })}
         >
           －
         </button>
