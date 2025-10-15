@@ -1,34 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/app/components/Header";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Hotel3D",
-  description: "ホテル比較アプリ",
+  description: "3Dでホテルを見て、予約できるアプリ",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
       <head />
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Header />
-        <main>{children}</main>
+      <body className="min-h-screen bg-gray-50 text-gray-900">
+        {/* ← Header は useSearchParams を使うので Suspense で包む */}
+        <Suspense fallback={null}>
+          <Header />
+        </Suspense>
+        <main className="max-w-6xl mx-auto p-4">{children}</main>
       </body>
     </html>
   );

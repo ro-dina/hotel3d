@@ -1,76 +1,51 @@
 "use client";
-
-import React, { useEffect, useMemo, useState } from "react";
-import Map from "@/app/components/Map";
-import PriceHistogram from "@/app/components/PriceHistogram";
-import type { Feature, Geometry } from "geojson";
+import Image from "next/image";
+import { Suspense, useMemo, useState } from "react";
+import { HOTELS } from "@/data/mockHotels";
+import MapPanel from "./components/MapPanel";
 
 export default function HomePage() {
-  // Map state
-  const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>(
-    { coordinates: [139, 37.5], zoom: 1 }
+  const [region, setRegion] = useState<string | null>(null);
+  const hotels = useMemo(
+    () => HOTELS.filter(h => !region || h.region === region),
+    [region]
   );
-  const [pref, setPref] = useState<string>("");
-
-  // hysteresis to avoid rapid layer switching
-  const [lastLevel, setLastLevel] = useState<"regions" | "prefecture" | "japan">("regions");
-  const level: "regions" | "prefecture" | "japan" = useMemo(() => {
-    const z = position.zoom;
-    if (lastLevel === "regions") {
-      if (z > 1.9) return "prefecture";
-      return "regions";
-    }
-    if (lastLevel === "prefecture") {
-      if (z >= 3.4) return "japan";
-      if (z < 1.6) return "regions";
-      return "prefecture";
-    }
-    // lastLevel === "japan"
-    if (z < 3.0) return "prefecture";
-    return "japan";
-  }, [position.zoom, lastLevel]);
-  useEffect(() => { setLastLevel(level); }, [level]);
-
-  // demo prices for the histogram (replace with your actual data source)
-  const prices = useMemo(() => [8000, 9000, 12000, 15000, 11000, 9500, 13000, 7000, 20000, 16000, 14000, 10000], []);
-
-  const readAreaName = (geo: Feature<Geometry, Record<string, unknown>>): string => {
-    const p = (geo.properties ?? {}) as Record<string, unknown>;
-    const keys = ["N03_005", "N03_004", "N03_001", "region", "region_name"];
-    for (const key of keys) {
-      const val = p[key];
-      if (typeof val === "string") return val;
-    }
-    return "";
-  };
 
   return (
-    <main className="mx-auto max-w-6xl p-4 space-y-8">
-      <h1 className="sr-only">トップページ</h1>
-      <div className="text-sm text-gray-600">{pref ? `選択: ${pref}` : ""}</div>
+    <div className="grid lg:grid-cols-[2fr_3fr] gap-4">
+      <Suspense fallback={<div className="bg-white border rounded-lg p-4">地図を読み込み中...</div>}>
+        <MapPanel value={region} onPick={setRegion} />
+      </Suspense>
 
-      {/* Map section */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-gray-700">日本地図</h2>
-        <Map
-          pref={pref}
-          setPref={setPref}
-          position={position}
-          setPosition={setPosition}
-          level={level}
-          readAreaName={readAreaName}
-          height={480}
-          center={[139, 37.5]}
-        />
+      <section className="bg-white border rounded-lg p-4 shadow">
+        <h2 className="font-semibold mb-3">
+          {region ? `${region}のホテル` : "すべてのホテル"}
+        </h2>
+        <ul className="grid md:grid-cols-2 gap-4">
+          {hotels.map(h => (
+            <li key={h.id} className="border rounded-lg overflow-hidden bg-white">
+              <Image
+                src={h.imageUrl}
+                alt={h.name}
+                width={600}
+                height={400}
+                className="w-full h-40 object-cover"
+                unoptimized
+              />
+              <div className="p-3">
+                <div className="font-semibold">{h.name}</div>
+                <div className="text-sm text-gray-600">{h.region}・{h.pref ?? ""}</div>
+                <div className="mt-1 text-lg font-bold">¥{h.price.toLocaleString()}</div>
+                <div className="mt-2 flex gap-2 text-sm">
+                  <a href={`/hotel/${h.id}`} className="underline">詳細</a>
+                  <a href={`/view3d/${h.id}`} className="underline">3Dを見る</a>
+                  <a href={`/reserve/${h.id}`} className="underline">予約へ</a>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
       </section>
-
-      {/* Histogram section */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-gray-700">価格ヒストグラム</h2>
-        <div className="w-full">
-          <PriceHistogram prices={prices} width={960} height={220} />
-        </div>
-      </section>
-    </main>
+    </div>
   );
 }
