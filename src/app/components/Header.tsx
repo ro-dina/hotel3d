@@ -21,7 +21,7 @@ export default function Header() {
   };
 
   return (
-    <header className="border-b bg-white">
+    <header className="sticky top-0 z-50 border-b bg-white">
       <div className="max-w-6xl mx-auto p-4 flex items-center gap-4">
         <Link href="/" className="font-semibold text-lg">Hotel3D</Link>
         <nav className="text-sm text-gray-600 flex gap-3">
