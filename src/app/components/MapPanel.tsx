@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { geoCentroid } from "d3-geo";
 import {
   ComposableMap,
   Geographies,
@@ -113,7 +114,8 @@ export default function MapPanel({ value, onPick, onPickPref, maxZoom = 12, thre
   };
 
   // ---- クリック時のハンドラ ------------------------------------------------
-  const handleClick = (props: Record<string, unknown>) => {
+  const handleClick = (props: Record<string, unknown>, feature?: RsmGeo) => {
+    // まずは選択コールバック（従来通り）
     if (level === "regions") {
       const region = getRegionName(props);
       onPick(region ?? null);
@@ -122,10 +124,35 @@ export default function MapPanel({ value, onPick, onPickPref, maxZoom = 12, thre
       if (onPickPref) onPickPref(pref ?? null);
       else onPick(pref ?? null); // フォールバック：今まで通り onPick に流す
     } else {
-      // japan（市区町村等）はひとまず都道府県名が取れればそれを返す
+      // japan（市区町村等）はひとまず都道府県名が取れればそれを返す（選択解除を防ぐ）
       const pref = getPrefName(props) ?? getRegionName(props);
       if (onPickPref) onPickPref(pref ?? null);
       else onPick(pref ?? null);
+    }
+
+    // 次に、クリック位置へパン＆適切なズーム段階へ寄せる
+    if (feature) {
+      try {
+        const [lon, lat] = geoCentroid(feature);
+        setCenter([lon, lat]);
+
+        setZoom((z) => {
+          if (level === "regions") {
+            // 地方 → 県 へ入る少し上まで
+            const target = Math.max(z, thresholds.regionsToPrefUp + 0.2);
+            return Math.min(target, maxZoom);
+          }
+          if (level === "prefecture") {
+            // 県 → 詳細 へ入る少し上まで
+            const target = Math.max(z, thresholds.prefToJapanUp + 0.5);
+            return Math.min(target, maxZoom);
+          }
+          // 既に詳細なら、わずかに寄る
+          return Math.min(z * 1.2, maxZoom);
+        });
+      } catch {
+        // セントロイド計算失敗時は何もしない（選択は成立済み）
+      }
     }
   };
 
@@ -172,8 +199,8 @@ export default function MapPanel({ value, onPick, onPickPref, maxZoom = 12, thre
                   return (
                     <Geography
                       key={geo.rsmKey ?? name ?? Math.random().toString(36)}
-                      geography={geo}               
-                      onClick={() => handleClick(props)}
+                      geography={geo}
+                      onClick={() => handleClick(props, geo)}
                       style={{
                         default: {
                             fill: selected ? "#dbeafe" : "#eef2ff",
