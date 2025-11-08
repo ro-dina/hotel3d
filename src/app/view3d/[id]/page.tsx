@@ -1,5 +1,5 @@
 "use client";
-import { use, useEffect, useRef } from "react";
+import { use, useEffect, useRef, useState } from "react";
 
 // Next.js 15+ では params は Promise
 type RouteParams = { id: string };
@@ -7,6 +7,22 @@ type RouteParams = { id: string };
 export default function Page({ params }: { params: Promise<RouteParams> }) {
   const { id } = use(params);
   const frameRef = useRef<HTMLIFrameElement>(null);
+
+  // 端末に応じて高さをフィット（モバイルのアドレスバーを考慮）
+  const [vh, setVh] = useState<number>(0);
+  useEffect(() => {
+    const update = () => {
+      const h = (window.visualViewport?.height ?? window.innerHeight);
+      setVh(h);
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
 
   // PC/モバイルの簡易判定（誤検出を減らす）
   const detectMobile = (): boolean => {
@@ -44,10 +60,19 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
     };
   }, []);
 
+  // ヘッダや余白ぶんのオフセット（適宜調整）
+  const HEADER_OFFSET = 120; // px
+  const containerStyle: React.CSSProperties = vh
+    ? { height: Math.max(360, Math.round(vh - HEADER_OFFSET)) }
+    : {};
+
   return (
     <main className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">3Dビュー（ホテルID: {id}）</h1>
-      <div className="w-full aspect-video border rounded overflow-hidden">
+      <div
+        className="w-full border rounded overflow-hidden min-h-[360px]"
+        style={containerStyle}
+      >
         <iframe
           ref={frameRef}
           id="unityFrame"
