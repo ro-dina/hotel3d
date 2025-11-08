@@ -47,7 +47,7 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
   return (
     <main className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">3Dビュー（ホテルID: {id}）</h1>
-      <div className="w-full md:aspect-video md:h-auto h-[calc(100dvh-70px)] border rounded overflow-hidden">
+      <div className="w-full aspect-video border rounded overflow-hidden">
         <iframe
           ref={frameRef}
           id="unityFrame"
