@@ -1,4 +1,4 @@
-// src/types/Hotel.ts
+// src/types/hotel.ts
 export type Hotel = {
   id: number;
   name: string;
@@ -21,8 +21,8 @@ export type ReservationDraft = {
   name: string;
   email: string;
   phone: string;
-  checkIn: string;
-  checkOut: string;
+  checkIn: string;   // ISO yyyy-mm-dd
+  checkOut: string;  // ISO yyyy-mm-dd
   guests: number;
   price: number;
 };

@@ -1,11 +1,8 @@
 "use client";
 import Image from "next/image";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useMemo, useState, useEffect } from "react";
 import { HOTELS } from "@/data/mockHotels";
 import MapPanel from "./components/MapPanel";
-import { useEffect } from "react";
-
-
 
 const PREF_TO_REGION: Record<string, string> = {
   "北海道": "北海道",
@@ -17,7 +14,7 @@ const PREF_TO_REGION: Record<string, string> = {
   "鳥取県": "中国", "島根県": "中国", "岡山県": "中国", "広島県": "中国", "山口県": "中国",
   "徳島県": "四国", "香川県": "四国", "愛媛県": "四国", "高知県": "四国",
   "福岡県": "九州", "佐賀県": "九州", "長崎県": "九州", "熊本県": "九州", "大分県": "九州", "宮崎県": "九州", "鹿児島県": "九州",
-  "沖縄県": "沖縄" // 多分後で修正することになろうと思う
+  "沖縄県": "沖縄"
 };
 
 export default function HomePage() {
@@ -50,23 +47,34 @@ export default function HomePage() {
       window.removeEventListener("keydown", preventKeys, { capture: true });
     };
   }, [lockScroll]);
+
   const hotels = useMemo(
     () => HOTELS.filter(h => !region || h.region === region),
     [region]
   );
 
+  // 開発時のみ: id 重複を警告
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    const counts = new Map<number, number>();
+    for (const h of hotels) counts.set(h.id, (counts.get(h.id) ?? 0) + 1);
+    const dups = Array.from(counts.entries()).filter(([, c]) => c > 1).map(([id]) => id);
+    if (dups.length) {
+      console.warn("[HomePage] Duplicate hotel ids detected:", dups);
+    }
+  }, [hotels]);
+
   return (
     <div className="grid lg:grid-cols-[2fr_3fr] gap-4">
-      <aside className = "order-first lg:order-none lg:sticky lg:top-4 h-[60vh] lg:h-[calc(100vh-2rem)]">
+      <aside className="order-first lg:order-none lg:sticky lg:top-4 h-[60vh] lg:h-[calc(100vh-2rem)]">
         <Suspense fallback={<div className="bg-white border rounded-lg p-4">地図を読み込み中...</div>}>
           <div
-            className="h-full bg-white border rounded-lg shadow overflow-hidden
-                      touch-none overscroll-contain select-none"
+            className="h-full bg-white border rounded-lg shadow overflow-hidden\n                      touch-none overscroll-contain select-none"
             onWheel={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onTouchMove={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onPointerEnter={() => setLockScroll(true)}
             onPointerLeave={() => setLockScroll(false)}
-            >
+          >
             <MapPanel
               value={region}
               onPick={setRegion}
@@ -83,14 +91,13 @@ export default function HomePage() {
         </Suspense>
       </aside>
 
-
       <section className="bg-white border rounded-lg p-4 shadow">
         <h2 className="font-semibold mb-3">
           {region ? `${region}のホテル` : "すべてのホテル"}
         </h2>
         <ul className="grid md:grid-cols-2 gap-4">
-          {hotels.map(h => (
-            <li key={h.id} className="border rounded-lg overflow-hidden bg-white">
+          {hotels.map((h, i) => (
+            <li key={`${h.id}-${h.name}-${i}`} className="border rounded-lg overflow-hidden bg-white">
               <Image
                 src={h.imageUrl}
                 alt={h.name}
