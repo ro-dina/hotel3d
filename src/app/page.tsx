@@ -61,10 +61,16 @@ const PREF_TO_REGION: Record<string, string> = {
 
 export default function HomePage() {
   const [region, setRegion] = useState<string | null>(null);
-  const hotels = useMemo(
-    () => HOTELS.filter((hotel) => !region || hotel.region === region),
-    [region]
-  );
+  const [prefecture, setPrefecture] = useState<string | null>(null);
+  const hotels = useMemo(() => {
+    if (prefecture) {
+      return HOTELS.filter((hotel) => hotel.pref === prefecture);
+    }
+    if (region) {
+      return HOTELS.filter((hotel) => hotel.region === region);
+    }
+    return HOTELS;
+  }, [region, prefecture]);
 
   // 開発時のみ: id 重複を警告
   useEffect(() => {
@@ -92,18 +98,20 @@ export default function HomePage() {
             }
           >
             <MapPanel
-              value={region}
-              onPick={setRegion}
-              onPickPref={(pref: string | null) =>
-                setRegion(pref ? PREF_TO_REGION[pref] ?? pref : null)
-              }
-              maxZoom={20}
-              thresholds={{
-                regionsToPrefUp: 10.0,
-                regionsToPrefDown: 10.3,
-                prefToJapanUp: 60,
-                prefToJapanDown: 40,
+              value={prefecture ?? region}
+              onPick={(regionName) => {
+                setPrefecture(null);
+                setRegion(regionName);
               }}
+              onPickPref={(pref: string | null) => {
+                setPrefecture(pref);
+                if (pref) {
+                  setRegion(PREF_TO_REGION[pref] ?? pref);
+                } else {
+                  setRegion(null);
+                }
+              }}
+              maxZoom={20}
               panelClassName="absolute inset-0"
               mapWrapperClassName="absolute inset-0"
               mapStyle={{ width: "100%", height: "100%" }}
@@ -132,11 +140,14 @@ export default function HomePage() {
                 <span className="rounded-full border border-white/40 px-3 py-1">
                   OpenStreetMap タイル
                 </span>
-                {region && (
+                {(region || prefecture) && (
                   <button
                     type="button"
                     className="rounded-full border border-indigo-400/80 bg-indigo-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200"
-                    onClick={() => setRegion(null)}
+                    onClick={() => {
+                      setPrefecture(null);
+                      setRegion(null);
+                    }}
                   >
                     フィルタ解除
                   </button>
@@ -148,19 +159,28 @@ export default function HomePage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.4em] text-white/60">
-                    {region ? `${region}のホテル` : "全国の宿泊施設"}
+                    {prefecture
+                      ? `${prefecture}のホテル`
+                      : region
+                      ? `${region}のホテル`
+                      : "全国の宿泊施設"}
                   </p>
                   <h2 className="mt-1 text-2xl font-semibold text-white">
-                    {region
+                    {prefecture
+                      ? `${prefecture}の宿泊施設一覧`
+                      : region
                       ? `${region}の宿泊施設一覧`
                       : "選りすぐりの宿泊施設をチェック"}
                   </h2>
                 </div>
-                {region && (
+                {(region || prefecture) && (
                   <button
                     type="button"
                     className="text-sm font-medium text-indigo-300 underline"
-                    onClick={() => setRegion(null)}
+                    onClick={() => {
+                      setPrefecture(null);
+                      setRegion(null);
+                    }}
                   >
                     クリア
                   </button>
