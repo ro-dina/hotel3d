@@ -8,16 +8,20 @@ export const metadata: Metadata = {
   description: "3Dでホテルを見て、予約できるアプリ",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="ja">
       <head />
-      <body className="min-h-screen bg-gray-50 text-gray-900">
+      <body className="min-h-screen bg-slate-950 text-gray-900">
         {/* ← Header は useSearchParams を使うので Suspense で包む */}
         <Suspense fallback={null}>
           <Header />
         </Suspense>
-        <main className="max-w-6xl mx-auto p-4">{children}</main>
+        <main className="min-h-screen w-full">{children}</main>
       </body>
     </html>
   );
