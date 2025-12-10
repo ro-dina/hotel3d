@@ -4072,7 +4072,7 @@ export const HOTELS: Hotel[] = [
     available: true
   },
   {
-    id: 339,
+    id: 340,
     name: "那須塩原リゾートホテル",
     description: "那須塩原市の中心地に位置する便利なリゾートホテル。",
     price: 25000,

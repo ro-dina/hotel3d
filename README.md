@@ -4,6 +4,8 @@
 塗った範囲を検索
 囲んだ範囲を検索
 
+[ここから日本の市区町村などは落としてきた](https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-v2_4.html)
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

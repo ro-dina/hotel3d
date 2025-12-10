@@ -51,6 +51,8 @@ type JPProps = GeoJsonProperties & {
   N03_005?: string;
 };
 
+type RsmGeo = Feature<Geometry, JPProps>;
+
 const DEFAULT_THRESHOLDS = {
   regionsToPrefUp: 1.5,
   regionsToPrefDown: 1.2,
@@ -73,11 +75,34 @@ const TARGET_KEYS = [
   "N03_005",
 ] as const;
 
+const REGION_KEYS = ["region", "region_name", "地方名"] as const;
+const PREF_KEYS = ["N03_004", "N03_001", "N03_005", "name", "NAME"] as const;
+
 function getName(props: Record<string, unknown>): string | null {
   for (const key of TARGET_KEYS) {
     const value = props[key as keyof typeof props];
     if (typeof value === "string" && value.length) return value;
   }
+  return null;
+}
+
+function getFirstStringValue<K extends readonly string[]>(
+  props: Record<string, unknown>,
+  keys: K
+): string | null {
+  for (const key of keys) {
+    const value = props[key as keyof typeof props];
+    if (typeof value === "string" && value.length) return value;
+  }
+  return null;
+}
+
+function getRegionName(props: Record<string, unknown>): string | null {
+  return getFirstStringValue(props, REGION_KEYS);
+}
+
+function getPrefName(props: Record<string, unknown>): string | null {
+  return getFirstStringValue(props, PREF_KEYS) ?? getRegionName(props);
   return null;
 }
 
