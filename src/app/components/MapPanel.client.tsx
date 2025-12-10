@@ -20,11 +20,6 @@ import type {
 import type { LatLngExpression, LeafletEvent } from "leaflet";
 import type { Objects, Topology } from "topojson-specification";
 
-type MapDimensions = {
-  width?: number;
-  height?: number;
-};
-
 export type MapPanelProps = {
   value: string | null;
   onPick: (region: string | null) => void;
@@ -36,7 +31,10 @@ export type MapPanelProps = {
     prefToJapanUp: number;
     prefToJapanDown: number;
   };
-  mapDimensions?: MapDimensions;
+  mapDimensions?: {
+    width?: number;
+    height?: number;
+  };
   panelClassName?: string;
   mapWrapperClassName?: string;
   mapStyle?: CSSProperties;
@@ -159,7 +157,7 @@ export default function MapPanel({
 
   useEffect(() => {
     const controller = new AbortController();
-    let isActive = true;
+    let active = true;
 
     fetch(geographyUrl, { cache: "no-store", signal: controller.signal })
       .then((res) => {
@@ -167,7 +165,7 @@ export default function MapPanel({
         return res.json();
       })
       .then((data: unknown) => {
-        if (!isActive) return;
+        if (!active) return;
         if (
           typeof data === "object" &&
           data !== null &&
@@ -207,11 +205,11 @@ export default function MapPanel({
       .catch((err) => {
         if ((err as Error).name === "AbortError") return;
         console.error(err);
-        if (isActive) setGeo(null);
+        if (active) setGeo(null);
       });
 
     return () => {
-      isActive = false;
+      active = false;
       controller.abort();
     };
   }, [geographyUrl]);
