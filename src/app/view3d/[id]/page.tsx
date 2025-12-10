@@ -1,49 +1,86 @@
-import { HOTELS } from "@/data/mockHotels";
+"use client";
+import { use, useEffect, useRef, useState } from "react";
 
-export async function generateStaticParams() {
-  return HOTELS.map(h => ({ id: String(h.id) }));
-}
-
+// Next.js 15+ では params は Promise
 type RouteParams = { id: string };
 
-export default async function Page(props: unknown) {
-  const { params } = props as { params: RouteParams };
-  const { id } = params;
+export default function Page({ params }: { params: Promise<RouteParams> }) {
+  const { id } = use(params);
+  const frameRef = useRef<HTMLIFrameElement>(null);
 
-  // 将来: ホテルに紐づく Unity 空間内座標をサーバから取得する想定
-  const warp = { x: 10, y: 0, z: 5 };
+  // 端末に応じて高さをフィット（モバイルのアドレスバーを考慮）
+  const [vh, setVh] = useState<number>(0);
+  useEffect(() => {
+    const update = () => {
+      const h = (window.visualViewport?.height ?? window.innerHeight);
+      setVh(h);
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+
+  // PC/モバイルの簡易判定（誤検出を減らす）
+  const detectMobile = (): boolean => {
+    const ua = navigator.userAgent || "";
+    const coarse = matchMedia("(pointer:coarse)").matches;
+    const nav = navigator as Navigator & { maxTouchPoints?: number };
+    const touchPoints = nav.maxTouchPoints ?? 0;
+    return /Android|iPhone|iPad|iPod/i.test(ua) || (coarse && touchPoints > 0);
+  };
+
+  useEffect(() => {
+    const isMobile = detectMobile();
+    const frameEl = frameRef.current; // cleanup 用に退避
+
+    const send = () => {
+      frameEl?.contentWindow?.postMessage(
+        { type: "setMobile", payload: isMobile ? 1 : 0 },
+        "*"
+      );
+    };
+
+    const onLoad = () => send();
+    frameEl?.addEventListener("load", onLoad);
+
+    // Unity 側の初期化タイミング差吸収
+    const t1 = setTimeout(send, 800);
+    const t2 = setTimeout(send, 1800);
+    const t3 = setTimeout(send, 3200);
+
+    return () => {
+      frameEl?.removeEventListener("load", onLoad);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, []);
+
+  // ヘッダや余白ぶんのオフセット（適宜調整）
+  const HEADER_OFFSET = 120; // px
+  const containerStyle: React.CSSProperties = vh
+    ? { height: Math.max(360, Math.round(vh - HEADER_OFFSET)) }
+    : {};
 
   return (
     <main className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">3Dビュー（ホテルID: {id}）</h1>
-      <div className="w-full aspect-video border rounded overflow-hidden">
-        {/* 例: /public/unity/hotel{id}/index.html を配置すると読み込めます */}
+      <div
+        className="w-full border rounded overflow-hidden min-h-[360px]"
+        style={containerStyle}
+      >
         <iframe
+          ref={frameRef}
           id="unityFrame"
-          src={`/unity/hotel${id}/index.html`}
+          src={`/view3d/WebGLBuild/index.html`}
           className="w-full h-full"
           allowFullScreen
         />
       </div>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            // Web→Unityへ座標を送る例（postMessage）
-            window.addEventListener('message', (ev) => {
-              // Unityからのメッセージ受け取り用
-              console.log('[Unity->Web]', ev.data);
-            });
-            // 初期ワープ通知（Unity側にリスナー実装が必要）
-            window.addEventListener('load', () => {
-              const f = document.getElementById('unityFrame');
-              if (f && f.contentWindow) {
-                const message = { type: 'warpTo', payload: ${JSON.stringify(warp)} };
-                f.contentWindow.postMessage(message, '*');
-              }
-            });
-          `,
-        }}
-      />
     </main>
   );
 }

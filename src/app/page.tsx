@@ -66,6 +66,19 @@ export default function HomePage() {
     [region]
   );
 
+  // 開発時のみ: id 重複を警告
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    const counts = new Map<number, number>();
+    for (const h of hotels) counts.set(h.id, (counts.get(h.id) ?? 0) + 1);
+    const dups = Array.from(counts.entries())
+      .filter(([, c]) => c > 1)
+      .map(([id]) => id);
+    if (dups.length) {
+      console.warn("[HomePage] Duplicate hotel ids detected:", dups);
+    }
+  }, [hotels]);
+
   return (
     <div className="min-h-screen w-full bg-slate-950 text-white">
       <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-[3fr_2fr]">
