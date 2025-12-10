@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { Suspense, useMemo, useState } from "react";
-import { HOTELS } from "@/data/mockHotels";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { HOTELS } from "@/app/data/mockHotels";
 
 const MapPanel = dynamic(() => import("./components/MapPanel.client"), {
   ssr: false,
@@ -170,7 +170,7 @@ export default function HomePage() {
               <ul className="mt-6 grid gap-4 md:grid-cols-2">
                 {hotels.map((hotel) => (
                   <li
-                    key={hotel.id}
+                    key={`${hotel.id}-${hotel.name}`}
                     className="overflow-hidden rounded-2xl border border-white/20 bg-slate-900/70 shadow-lg shadow-black/60 transition hover:shadow-white/30"
                   >
                     <Image

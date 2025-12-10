@@ -79,6 +79,68 @@ function getName(props: Record<string, unknown>): string | null {
   return null;
 }
 
+type Point = [number, number];
+
+function ringContainsPoint(point: Point, ring: number[][]): boolean {
+  if (ring.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+    const intersects =
+      yi > point[1] !== yj > point[1] &&
+      point[0] < ((xj - xi) * (point[1] - yi)) / (yj - yi) + xi;
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function polygonContainsPoint(
+  point: Point,
+  coordinates: number[][][]
+): boolean {
+  if (!coordinates.length) return false;
+  if (!ringContainsPoint(point, coordinates[0])) return false;
+  for (let i = 1; i < coordinates.length; i += 1) {
+    if (ringContainsPoint(point, coordinates[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function containsPointInFeature(
+  feature: Feature<Geometry, JPProps>,
+  point: Point
+): boolean {
+  if (!feature?.geometry) return false;
+  if (feature.geometry.type === "Polygon") {
+    return polygonContainsPoint(point, feature.geometry.coordinates);
+  }
+  if (feature.geometry.type === "MultiPolygon") {
+    return feature.geometry.coordinates.some((coordinates) =>
+      polygonContainsPoint(point, coordinates)
+    );
+  }
+  return false;
+}
+
+function findPrefectureNameAtPoint(
+  featureCollection: FeatureCollection<Geometry, JPProps>,
+  point: Point
+): string | null {
+  if (!featureCollection?.features?.length) return null;
+  for (const feature of featureCollection.features) {
+    if (containsPointInFeature(feature, point)) {
+      const name = getName(feature.properties ?? {});
+      if (name) return name;
+    }
+  }
+  return null;
+}
+
 function MapEvents({
   onMove,
 }: {
