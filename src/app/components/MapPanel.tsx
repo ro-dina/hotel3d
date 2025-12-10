@@ -2,7 +2,7 @@
 
 import type { CSSProperties, ReactElement } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import "leaflet/dist/leaflet.css";
+import { geoCentroid } from "d3-geo";
 import {
   MapContainer,
   TileLayer,
@@ -216,20 +216,46 @@ export default function MapPanel({
     };
   }, [geographyUrl]);
 
-  const handleClick = (props: Record<string, unknown>) => {
-    const name = getName(props);
+  // ---- クリック時のハンドラ ------------------------------------------------
+  const handleClick = (props: Record<string, unknown>, feature?: RsmGeo) => {
+    // まずは選択コールバック（従来通り）
     if (level === "regions") {
-      onPick(name ?? null);
-      return;
+      const region = getRegionName(props);
+      onPick(region ?? null);
+    } else if (level === "prefecture") {
+      const pref = getPrefName(props);
+      if (onPickPref) onPickPref(pref ?? null);
+      else onPick(pref ?? null); // フォールバック：今まで通り onPick に流す
+    } else {
+      // japan（市区町村等）はひとまず都道府県名が取れればそれを返す（選択解除を防ぐ）
+      const pref = getPrefName(props) ?? getRegionName(props);
+      if (onPickPref) onPickPref(pref ?? null);
+      else onPick(pref ?? null);
     }
-    if (level === "prefecture") {
-      if (onPickPref) onPickPref(name ?? null);
-      else onPick(name ?? null);
-      return;
-    }
-    if (level === "japan") {
-      if (onPickPref) onPickPref(name ?? null);
-      else onPick(name ?? null);
+
+    // 次に、クリック位置へパン＆適切なズーム段階へ寄せる
+    if (feature) {
+      try {
+        const [lon, lat] = geoCentroid(feature);
+        setCenter([lon, lat]);
+
+        setZoom((z) => {
+          if (level === "regions") {
+            // 地方 → 県 へ入る少し上まで
+            const target = Math.max(z, thresholds.regionsToPrefUp + 0.2);
+            return Math.min(target, maxZoom);
+          }
+          if (level === "prefecture") {
+            // 県 → 詳細 へ入る少し上まで
+            const target = Math.max(z, thresholds.prefToJapanUp + 0.5);
+            return Math.min(target, maxZoom);
+          }
+          // 既に詳細なら、わずかに寄る
+          return Math.min(z * 1.2, maxZoom);
+        });
+      } catch {
+        // セントロイド計算失敗時は何もしない（選択は成立済み）
+      }
     }
   };
 
