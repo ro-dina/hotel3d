@@ -10,6 +10,7 @@ import {
   GeoJSON,
   GeoJSONProps,
   useMapEvents,
+  useMap,
 } from "react-leaflet";
 import { feature as topojsonFeature } from "topojson-client";
 import type {
@@ -198,6 +199,50 @@ function MapEvents({
   return null;
 }
 
+/**
+ * SyncView
+ * - MapContainer に対して外部から center/zoom を制御するための小コンポーネント。
+ * - center/zoom が変化したら map.setView を呼んで地図を移動させる。
+ */
+function SyncView({
+  center,
+  zoom,
+}: {
+  center: [number, number];
+  zoom: number;
+}): ReactElement | null {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    try {
+      map.setView(center, zoom, { animate: true });
+    } catch {
+      // ignore
+    }
+  }, [map, center, zoom]);
+  return null;
+}
+
+/**
+ * MapController
+ * - MapContainer 内で useMap() を使い、親コンポーネントの mapRef をセットする小コンポーネント
+ * - クリック時などに即時 setView を行うために map インスタンスへアクセスできるようにする
+ */
+function MapController({
+  onMapReady,
+}: {
+  onMapReady: (map: any | null) => void;
+}): ReactElement | null {
+  const map = useMap();
+  useEffect(() => {
+    onMapReady(map ?? null);
+    return () => {
+      onMapReady(null);
+    };
+  }, [map, onMapReady]);
+  return null;
+}
+
 type Level = "regions" | "prefecture" | "prefectureDetail" | "japan";
 
 function determineLevel(
@@ -274,6 +319,13 @@ export default function MapPanel({
   const detailCacheRef = useRef<
     Record<string, FeatureCollection<Geometry, JPProps>>
   >({});
+  // 明示的にクリックで選択された都道府県を追跡する。これにより、
+  // クリックによって都道府県詳細タイルをロードするトリガーを明確にできる。
+  const [selectedPrefecture, setSelectedPrefecture] = useState<string | null>(
+    null
+  );
+  // Leaflet map インスタンスを保持する ref（クリックで即座に setView するため）
+  const mapRef = useRef<any | null>(null);
   const thresholds = useMemo(
     () => ({ ...DEFAULT_THRESHOLDS, ...(thresholdsOverride ?? {}) }),
     [thresholdsOverride]
@@ -302,6 +354,14 @@ export default function MapPanel({
     return "prefecture";
   }, [zoom, centerPrefectureName, thresholds]);
 
+  // Clear explicit prefecture selection when user navigates back to broad levels
+  // so we don't keep forcing detail loads after zooming out.
+  useEffect(() => {
+    if (level === "regions" || level === "japan") {
+      if (selectedPrefecture) setSelectedPrefecture(null);
+    }
+  }, [level, selectedPrefecture]);
+
   const versionedUrl = useMemo(() => {
     const stamp = Date.now();
     const suffix = `?v=${stamp}`;
@@ -317,11 +377,15 @@ export default function MapPanel({
   const geographyUrl = useMemo(() => {
     if (level === "regions") return versionedUrl.regions;
     if (level === "prefecture") return versionedUrl.prefecture;
-    if (level === "prefectureDetail" && centerPrefectureName)
-      return versionedUrl.prefectureDetail(centerPrefectureName);
+    if (level === "prefectureDetail") {
+      // クリックで選択された都道府県を優先して読み込む。なければ中心位置から推定した名前を使用。
+      const prefToLoad = selectedPrefecture ?? centerPrefectureName;
+      if (prefToLoad) return versionedUrl.prefectureDetail(prefToLoad);
+      return null;
+    }
     if (level === "japan") return versionedUrl.japan;
     return null;
-  }, [level, centerPrefectureName, versionedUrl]);
+  }, [level, centerPrefectureName, selectedPrefecture, versionedUrl]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -369,8 +433,13 @@ export default function MapPanel({
         if (level === "prefecture") {
           setPrefectureGeo(collection);
         }
-        if (level === "prefectureDetail" && centerPrefectureName) {
-          detailCacheRef.current[centerPrefectureName] = collection;
+        if (level === "prefectureDetail") {
+          // cache using explicitly selected prefecture when available,
+          // otherwise fall back to the center-inferred prefecture name.
+          const key = selectedPrefecture ?? centerPrefectureName;
+          if (key) {
+            detailCacheRef.current[key] = collection;
+          }
         }
         setGeo(collection);
       })
@@ -394,39 +463,67 @@ export default function MapPanel({
     versionedUrl.japan,
   ]);
 
-  const handleClick = (props: Record<string, unknown>, feature?: RsmGeo) => {
+  const handleClick = (
+    props: Record<string, unknown>,
+    feature?: RsmGeo,
+    layer?: unknown
+  ) => {
+    // 名前を先に決定
+    const region = getRegionName(props);
+    const pref = getPrefName(props) ?? region;
     if (level === "regions") {
-      const region = getRegionName(props);
       onPick(region ?? null);
     } else if (level === "prefecture") {
-      const pref = getPrefName(props);
       if (onPickPref) onPickPref(pref ?? null);
       else onPick(pref ?? null);
     } else {
-      const pref = getPrefName(props) ?? getRegionName(props);
       if (onPickPref) onPickPref(pref ?? null);
       else onPick(pref ?? null);
+    }
+    // クリックで都道府県名が得られたら明示的に選択状態にする
+    if (pref) {
+      setSelectedPrefecture(pref);
     }
 
     if (feature) {
       try {
         const [lon, lat] = geoCentroid(feature);
-        setCenter([lat, lon]);
+        const targetLatLng: [number, number] = [lat, lon];
 
+        // 設定する目標ズームを計算して即時 map.setView を試みる
+        setCenter(targetLatLng);
         setZoom((z) => {
+          let target: number;
           if (level === "regions") {
-            const target = Math.max(z, thresholds.regionsToPrefUp + 0.2);
-            return Math.min(target, maxZoom);
+            target = Math.min(
+              Math.max(z, thresholds.regionsToPrefUp + 0.2),
+              maxZoom
+            );
+          } else if (level === "prefecture") {
+            target = Math.min(
+              Math.max(z, thresholds.prefToDetailUp + 0.5),
+              maxZoom
+            );
+          } else if (level === "prefectureDetail") {
+            target = Math.min(
+              Math.max(z, thresholds.prefToJapanUp + 0.5),
+              maxZoom
+            );
+          } else {
+            target = Math.min(z * 1.2, maxZoom);
           }
-          if (level === "prefecture") {
-            const target = Math.max(z, thresholds.prefToDetailUp + 0.5);
-            return Math.min(target, maxZoom);
+          // 可能なら即座に地図を移動させる
+          try {
+            if (
+              mapRef.current &&
+              typeof mapRef.current.setView === "function"
+            ) {
+              mapRef.current.setView(targetLatLng, target, { animate: true });
+            }
+          } catch {
+            // ignore map errors
           }
-          if (level === "prefectureDetail") {
-            const target = Math.max(z, thresholds.prefToJapanUp + 0.5);
-            return Math.min(target, maxZoom);
-          }
-          return Math.min(z * 1.2, maxZoom);
+          return target;
         });
       } catch {
         // ignore centroid failures
@@ -478,9 +575,13 @@ export default function MapPanel({
           center={centerLatLng}
           zoom={zoom}
           scrollWheelZoom
+          whenCreated={(m) => {
+            mapRef.current = m;
+          }}
           style={{ width: "100%", height: "100%" }}
           maxZoom={maxZoom}
         >
+          <SyncView center={[center[0], center[1]]} zoom={zoom} />
           <MapEvents
             onMove={(nextCenter, nextZoom) => {
               setCenter(nextCenter);
@@ -496,8 +597,8 @@ export default function MapPanel({
               data={geo}
               style={styleFeature}
               onEachFeature={(feature, layer) => {
-                layer.on("click", () =>
-                  handleClick(feature.properties ?? {}, feature)
+                layer.on("click", (e) =>
+                  handleClick(feature.properties ?? {}, feature, layer)
                 );
               }}
             />
