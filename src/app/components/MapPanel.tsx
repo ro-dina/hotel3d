@@ -63,7 +63,8 @@ type JPProps = GeoJsonProperties & {
 type RsmGeo = Feature<Geometry, JPProps>;
 
 const DEFAULT_THRESHOLDS: ZoomThresholds = {
-  regionsToPrefUp: 5.5,
+  // 地方 -> 都道府県 表示閾値をやや下げて、通常のズーム操作で都道府県表示に切り替わるようにする
+  regionsToPrefUp: 5.0,
   regionsToPrefDown: 4.0,
   prefToJapanUp: 12,
   prefToJapanDown: 10,
@@ -245,20 +246,12 @@ function MapController({
 
 type Level = "regions" | "prefecture" | "prefectureDetail" | "japan";
 
-function determineLevel(
-  zoom: number,
-  thresholds: ZoomThresholds,
-  hasPrefecture: boolean
-): Level {
+function determineLevel(zoom: number, thresholds: ZoomThresholds): Level {
+  // レベル判定は「ズーム倍率だけ」に基づく（要件どおり）
   if (zoom >= thresholds.prefToJapanUp) return "japan";
-  if (hasPrefecture && zoom >= thresholds.prefToDetailUp)
-    return "prefectureDetail";
+  if (zoom >= thresholds.prefToDetailUp) return "prefectureDetail";
   if (zoom >= thresholds.regionsToPrefUp) return "prefecture";
-  if (zoom < thresholds.regionsToPrefDown) return "regions";
-  if (hasPrefecture && zoom >= thresholds.prefToDetailDown)
-    return "prefectureDetail";
-  if (zoom >= thresholds.prefToJapanDown) return "japan";
-  return "prefecture";
+  return "regions";
 }
 
 function parseMapData(data: unknown): FeatureCollection<Geometry, JPProps> {
@@ -342,18 +335,12 @@ export default function MapPanel({
   const level = useMemo<Level>(() => {
     const z = zoom;
     const t = thresholds;
-    const hasPrefecture = Boolean(centerPrefectureName);
-
+    // レベル判定はズーム倍率のみで決定する
     if (z >= t.prefToJapanUp) return "japan";
-    if (hasPrefecture && z >= t.prefToDetailUp) return "prefectureDetail";
+    if (z >= t.prefToDetailUp) return "prefectureDetail";
     if (z >= t.regionsToPrefUp) return "prefecture";
-    if (z < t.regionsToPrefDown) return "regions";
-    if (hasPrefecture && z >= t.prefToDetailDown) return "prefectureDetail";
-    if (z >= t.prefToJapanDown) return "japan";
-    if (hasPrefecture && z >= t.prefToDetailDown) return "prefectureDetail";
-    return "prefecture";
-  }, [zoom, centerPrefectureName, thresholds]);
-
+    return "regions";
+  }, [zoom, thresholds]);
   // Clear explicit prefecture selection when user navigates back to broad levels
   // so we don't keep forcing detail loads after zooming out.
   useEffect(() => {
@@ -361,6 +348,17 @@ export default function MapPanel({
       if (selectedPrefecture) setSelectedPrefecture(null);
     }
   }, [level, selectedPrefecture]);
+
+  // デバッグ: レベル・ズーム変化をコンソールに出力（開発時のみ有効化すると原因追跡がしやすい）
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.debug("[MapPanel] level change", {
+      level,
+      zoom,
+      center,
+      selectedPrefecture,
+    });
+  }, [level, zoom, center, selectedPrefecture]);
 
   const versionedUrl = useMemo(() => {
     const stamp = Date.now();
@@ -480,8 +478,9 @@ export default function MapPanel({
       if (onPickPref) onPickPref(pref ?? null);
       else onPick(pref ?? null);
     }
-    // クリックで都道府県名が得られたら明示的に選択状態にする
-    if (pref) {
+    // クリックで都道府県名が得られたら（都道府県表示または詳細表示時のみ）明示的に選択状態にする
+    // 地方レベルでのクリックは selectedPrefecture に設定しない（存在しない都道府県ファイルを参照するのを防ぐ）
+    if (pref && level !== "regions") {
       setSelectedPrefecture(pref);
     }
 
@@ -493,8 +492,9 @@ export default function MapPanel({
         // 現在の zoom を元に目標ズームを計算する（状態更新の遅延によらず即時に計算）
         let targetZoom: number;
         if (level === "regions") {
+          // 地方クリック時はより大きくズームして都道府県表示に移行させる
           targetZoom = Math.min(
-            Math.max(zoom, thresholds.regionsToPrefUp + 0.2),
+            Math.max(zoom, thresholds.regionsToPrefUp + 1.5),
             maxZoom
           );
         } else if (level === "prefecture") {
