@@ -592,6 +592,8 @@ export default function MapPanel({
           />
           {geo && (
             <GeoJSON
+// 修正: keyを追加して、データソースが変わるたびに再描画させる
+              key={geographyUrl ?? level} 
               data={geo}
               style={styleFeature}
               onEachFeature={(feature, layer) => {
