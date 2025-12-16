@@ -123,23 +123,7 @@ export default function HomePage() {
         <div className="flex w-full flex-col overflow-y-auto bg-white/5 px-4 py-8 lg:px-8 lg:py-12">
           <div className="flex flex-1 flex-col gap-6">
             <section className="pointer-events-auto rounded-3xl border border-white/30 bg-white/10 p-6 shadow-2xl backdrop-blur">
-              <div className="text-xs uppercase tracking-[0.4em] text-white/70">
-                Hotel3D
-              </div>
-              <h1 className="mt-4 text-4xl font-semibold leading-tight text-white">
-                タイル地図とホテル一覧を横並びで表示
-              </h1>
-              <p className="mt-4 text-sm leading-relaxed text-white/70">
-                タイルベースの地図を左側に固定表示し、右側のカードでホテルを
-                探せます。地図からエリアを選ぶと一覧も連動します。
-              </p>
               <div className="mt-6 flex flex-wrap gap-3 text-xs text-white/80">
-                <span className="rounded-full border border-white/40 px-3 py-1">
-                  全画面・左右分割
-                </span>
-                <span className="rounded-full border border-white/40 px-3 py-1">
-                  OpenStreetMap タイル
-                </span>
                 {(region || prefecture) && (
                   <button
                     type="button"

@@ -19,7 +19,7 @@ import type {
   Geometry,
   GeoJsonProperties,
 } from "geojson";
-import type { LatLngExpression, LeafletEvent } from "leaflet";
+import type { LatLngExpression, LeafletEvent, Map } from "leaflet";
 import type { Objects, Topology } from "topojson-specification";
 
 type MapDimensions = {
@@ -231,7 +231,7 @@ function SyncView({
 function MapController({
   onMapReady,
 }: {
-  onMapReady: (map: any | null) => void;
+  onMapReady: (map: Map | null) => void;
 }): ReactElement | null {
   const map = useMap();
   useEffect(() => {
@@ -325,7 +325,7 @@ export default function MapPanel({
     null
   );
   // Leaflet map インスタンスを保持する ref（クリックで即座に setView するため）
-  const mapRef = useRef<any | null>(null);
+  const mapRef = useRef<Map | null>(null);
   const thresholds = useMemo(
     () => ({ ...DEFAULT_THRESHOLDS, ...(thresholdsOverride ?? {}) }),
     [thresholdsOverride]
@@ -490,41 +490,37 @@ export default function MapPanel({
         const [lon, lat] = geoCentroid(feature);
         const targetLatLng: [number, number] = [lat, lon];
 
-        // 設定する目標ズームを計算して即時 map.setView を試みる
+        // 現在の zoom を元に目標ズームを計算する（状態更新の遅延によらず即時に計算）
+        let targetZoom: number;
+        if (level === "regions") {
+          targetZoom = Math.min(
+            Math.max(zoom, thresholds.regionsToPrefUp + 0.2),
+            maxZoom
+          );
+        } else if (level === "prefecture") {
+          targetZoom = Math.min(
+            Math.max(zoom, thresholds.prefToDetailUp + 0.5),
+            maxZoom
+          );
+        } else if (level === "prefectureDetail") {
+          targetZoom = Math.min(
+            Math.max(zoom, thresholds.prefToJapanUp + 0.5),
+            maxZoom
+          );
+        } else {
+          targetZoom = Math.min(zoom * 1.2, maxZoom);
+        }
+
+        // 状態を更新して、即座に map.setView を呼ぶ（これで既にズーム済みの別都道府県クリックでも移動する）
         setCenter(targetLatLng);
-        setZoom((z) => {
-          let target: number;
-          if (level === "regions") {
-            target = Math.min(
-              Math.max(z, thresholds.regionsToPrefUp + 0.2),
-              maxZoom
-            );
-          } else if (level === "prefecture") {
-            target = Math.min(
-              Math.max(z, thresholds.prefToDetailUp + 0.5),
-              maxZoom
-            );
-          } else if (level === "prefectureDetail") {
-            target = Math.min(
-              Math.max(z, thresholds.prefToJapanUp + 0.5),
-              maxZoom
-            );
-          } else {
-            target = Math.min(z * 1.2, maxZoom);
+        setZoom(targetZoom);
+        try {
+          if (mapRef.current && typeof mapRef.current.setView === "function") {
+            mapRef.current.setView(targetLatLng, targetZoom, { animate: true });
           }
-          // 可能なら即座に地図を移動させる
-          try {
-            if (
-              mapRef.current &&
-              typeof mapRef.current.setView === "function"
-            ) {
-              mapRef.current.setView(targetLatLng, target, { animate: true });
-            }
-          } catch {
-            // ignore map errors
-          }
-          return target;
-        });
+        } catch {
+          // ignore map errors
+        }
       } catch {
         // ignore centroid failures
       }
@@ -575,12 +571,14 @@ export default function MapPanel({
           center={centerLatLng}
           zoom={zoom}
           scrollWheelZoom
-          whenCreated={(m) => {
-            mapRef.current = m;
-          }}
           style={{ width: "100%", height: "100%" }}
           maxZoom={maxZoom}
         >
+          <MapController
+            onMapReady={(m) => {
+              mapRef.current = m;
+            }}
+          />
           <SyncView center={[center[0], center[1]]} zoom={zoom} />
           <MapEvents
             onMove={(nextCenter, nextZoom) => {
