@@ -1,2 +1,1 @@
-// src/types/react-simple-maps.d.ts
-declare module "react-simple-maps";
+/* react-simple-maps型定義ファイルは不要なので削除します */
