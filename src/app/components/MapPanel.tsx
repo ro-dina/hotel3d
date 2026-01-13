@@ -63,14 +63,14 @@ type JPProps = GeoJsonProperties & {
 type RsmGeo = Feature<Geometry, JPProps>;
 
 const DEFAULT_THRESHOLDS: ZoomThresholds = {
-  // 地方 -> 都道府県 表示閾値をやや下げて、通常のズーム操作で都道府県表示に切り替わるようにする
-  regionsToPrefUp: 5.0,
-  regionsToPrefDown: 4.0,
-  prefToJapanUp: 12,
-  prefToJapanDown: 10,
-  prefToDetailUp: 8,
-  prefToDetailDown: 7,
-  detailToJapanDown: 11,
+  // より高いズーム倍率でのみレベルが切り替わるように調整
+  regionsToPrefUp: 8.5,      // 地方→都道府県
+  regionsToPrefDown: 7.0,    // 都道府県→地方
+  prefToJapanUp: 16,         // 都道府県→日本全体
+  prefToJapanDown: 15,       // 日本全体→都道府県
+  prefToDetailUp: 12,        // 都道府県→市区町村
+  prefToDetailDown: 12,      // 市区町村→都道府県
+  detailToJapanDown: 14,     // 市区町村→日本全体
 };
 
 type JapanTopology = Topology & {
@@ -341,13 +341,21 @@ export default function MapPanel({
     if (z >= t.regionsToPrefUp) return "prefecture";
     return "regions";
   }, [zoom, thresholds]);
-  // Clear explicit prefecture selection when user navigates back to broad levels
-  // so we don't keep forcing detail loads after zooming out.
+  // prefectureDetail以外のレベルになったら都道府県選択状態とキャッシュを必ず解除
   useEffect(() => {
-    if (level === "regions" || level === "japan") {
+    if (level !== "prefectureDetail") {
       if (selectedPrefecture) setSelectedPrefecture(null);
+      // 詳細キャッシュもクリア（prefectureDetail以外では不要なため）
+      detailCacheRef.current = {};
     }
   }, [level, selectedPrefecture]);
+
+  // 都道府県レベル以外になったらprefectureGeoもリセット
+  useEffect(() => {
+    if (level !== "prefecture" && level !== "prefectureDetail" && prefectureGeo) {
+      setPrefectureGeo(null);
+    }
+  }, [level, prefectureGeo]);
 
   // デバッグ: レベル・ズーム変化をコンソールに出力（開発時のみ有効化すると原因追跡がしやすい）
   useEffect(() => {
@@ -385,16 +393,61 @@ export default function MapPanel({
     return null;
   }, [level, centerPrefectureName, selectedPrefecture, versionedUrl]);
 
+  // 画面内の都道府県名リスト取得関数
+  function getVisiblePrefectures(
+    map: Map,
+    prefectureGeo: FeatureCollection<Geometry, JPProps>
+  ): string[] {
+    if (!map || !prefectureGeo) return [];
+    const bounds = map.getBounds();
+    const sw = [bounds.getSouthWest().lng, bounds.getSouthWest().lat];
+    const ne = [bounds.getNorthEast().lng, bounds.getNorthEast().lat];
+    const features = prefectureGeo.features;
+    const result: string[] = [];
+    for (const feature of features) {
+      if (feature.geometry.type === "Polygon") {
+        for (const ring of feature.geometry.coordinates as number[][][]) {
+          for (const pt of ring) {
+            if (
+              pt[0] >= sw[0] && pt[0] <= ne[0] &&
+              pt[1] >= sw[1] && pt[1] <= ne[1]
+            ) {
+              const name = getName(feature.properties);
+              if (name) result.push(name);
+              break;
+            }
+          }
+        }
+      } else if (feature.geometry.type === "MultiPolygon") {
+        for (const poly of feature.geometry.coordinates as number[][][][]) {
+          for (const ring of poly) {
+            for (const pt of ring) {
+              if (
+                pt[0] >= sw[0] && pt[0] <= ne[0] &&
+                pt[1] >= sw[1] && pt[1] <= ne[1]
+              ) {
+                const name = getName(feature.properties);
+                if (name) result.push(name);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    return Array.from(new Set(result.filter((v): v is string => !!v)));
+  }
+
   useEffect(() => {
+    // レベルやデータソースが変わったら必ずgeoをリセット
+    setGeo(null);
     const controller = new AbortController();
     let isActive = true;
 
     if (!geographyUrl) {
-      if (isActive) setGeo(null);
-      return () => {
-        isActive = false;
-        controller.abort();
-      };
+      isActive = false;
+      controller.abort();
+      return;
     }
 
     if (
@@ -403,6 +456,43 @@ export default function MapPanel({
       geographyUrl === versionedUrl.prefecture
     ) {
       setGeo(prefectureGeo);
+      return () => {
+        isActive = false;
+        controller.abort();
+      };
+    }
+
+    // 都道府県詳細レベルで画面内全都道府県を取得
+    if (level === "prefectureDetail" && prefectureGeo && mapRef.current) {
+      const visiblePrefs = getVisiblePrefectures(mapRef.current, prefectureGeo);
+      const uncachedPrefs = visiblePrefs.filter(
+        (pref): pref is string => !!pref && detailCacheRef.current[pref] === undefined
+      );
+      Promise.all(
+        uncachedPrefs.map((pref) =>
+          typeof pref === "string"
+            ? fetch(versionedUrl.prefectureDetail(pref), { cache: "no-store", signal: controller.signal })
+                .then((res) => res.ok ? res.json() : null)
+                .then((data) => {
+                  if (!isActive || !data) return null;
+                  const collection = parseMapData(data);
+                  detailCacheRef.current[pref] = collection;
+                  return collection;
+                })
+                .catch(() => null)
+            : Promise.resolve(null)
+        )
+      ).then(() => {
+        if (!isActive) return;
+        const allCollections = visiblePrefs
+          .map((pref) => (pref ? detailCacheRef.current[pref] : null))
+          .filter((c): c is FeatureCollection<Geometry, JPProps> => !!c);
+        const merged: FeatureCollection<Geometry, JPProps> = {
+          type: "FeatureCollection",
+          features: allCollections.flatMap((c) => c.features),
+        };
+        setGeo(merged);
+      });
       return () => {
         isActive = false;
         controller.abort();
@@ -592,6 +682,8 @@ export default function MapPanel({
           />
           {geo && (
             <GeoJSON
+// 修正: keyを追加して、データソースが変わるたびに再描画させる
+              key={geographyUrl ?? level} 
               data={geo}
               style={styleFeature}
               onEachFeature={(feature, layer) => {
