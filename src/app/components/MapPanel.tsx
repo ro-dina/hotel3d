@@ -64,13 +64,13 @@ type RsmGeo = Feature<Geometry, JPProps>;
 
 const DEFAULT_THRESHOLDS: ZoomThresholds = {
   // より高いズーム倍率でのみレベルが切り替わるように調整
-  regionsToPrefUp: 8.5,      // 地方→都道府県
-  regionsToPrefDown: 7.0,    // 都道府県→地方
-  prefToJapanUp: 16,         // 都道府県→日本全体
-  prefToJapanDown: 15,       // 日本全体→都道府県
-  prefToDetailUp: 12,        // 都道府県→市区町村
-  prefToDetailDown: 12,      // 市区町村→都道府県
-  detailToJapanDown: 14,     // 市区町村→日本全体
+  regionsToPrefUp: 8.5, // 地方→都道府県
+  regionsToPrefDown: 7.0, // 都道府県→地方
+  prefToJapanUp: 16, // 都道府県→日本全体
+  prefToJapanDown: 15, // 日本全体→都道府県
+  prefToDetailUp: 12, // 都道府県→市区町村
+  prefToDetailDown: 12, // 市区町村→都道府県
+  detailToJapanDown: 14, // 市区町村→日本全体
 };
 
 type JapanTopology = Topology & {
@@ -352,7 +352,11 @@ export default function MapPanel({
 
   // 都道府県レベル以外になったらprefectureGeoもリセット
   useEffect(() => {
-    if (level !== "prefecture" && level !== "prefectureDetail" && prefectureGeo) {
+    if (
+      level !== "prefecture" &&
+      level !== "prefectureDetail" &&
+      prefectureGeo
+    ) {
       setPrefectureGeo(null);
     }
   }, [level, prefectureGeo]);
@@ -409,8 +413,10 @@ export default function MapPanel({
         for (const ring of feature.geometry.coordinates as number[][][]) {
           for (const pt of ring) {
             if (
-              pt[0] >= sw[0] && pt[0] <= ne[0] &&
-              pt[1] >= sw[1] && pt[1] <= ne[1]
+              pt[0] >= sw[0] &&
+              pt[0] <= ne[0] &&
+              pt[1] >= sw[1] &&
+              pt[1] <= ne[1]
             ) {
               const name = getName(feature.properties);
               if (name) result.push(name);
@@ -423,8 +429,10 @@ export default function MapPanel({
           for (const ring of poly) {
             for (const pt of ring) {
               if (
-                pt[0] >= sw[0] && pt[0] <= ne[0] &&
-                pt[1] >= sw[1] && pt[1] <= ne[1]
+                pt[0] >= sw[0] &&
+                pt[0] <= ne[0] &&
+                pt[1] >= sw[1] &&
+                pt[1] <= ne[1]
               ) {
                 const name = getName(feature.properties);
                 if (name) result.push(name);
@@ -466,13 +474,17 @@ export default function MapPanel({
     if (level === "prefectureDetail" && prefectureGeo && mapRef.current) {
       const visiblePrefs = getVisiblePrefectures(mapRef.current, prefectureGeo);
       const uncachedPrefs = visiblePrefs.filter(
-        (pref): pref is string => !!pref && detailCacheRef.current[pref] === undefined
+        (pref): pref is string =>
+          !!pref && detailCacheRef.current[pref] === undefined
       );
       Promise.all(
         uncachedPrefs.map((pref) =>
           typeof pref === "string"
-            ? fetch(versionedUrl.prefectureDetail(pref), { cache: "no-store", signal: controller.signal })
-                .then((res) => res.ok ? res.json() : null)
+            ? fetch(versionedUrl.prefectureDetail(pref), {
+                cache: "no-store",
+                signal: controller.signal,
+              })
+                .then((res) => (res.ok ? res.json() : null))
                 .then((data) => {
                   if (!isActive || !data) return null;
                   const collection = parseMapData(data);
@@ -626,7 +638,7 @@ export default function MapPanel({
       color: "#4f46e5",
       weight: selected ? 2 : 0.8,
       opacity: 1,
-      fillOpacity: selected ? 0.8 : 0.6,
+      fillOpacity: selected ? 0.5 : 0.3,
     };
   };
 
@@ -682,8 +694,8 @@ export default function MapPanel({
           />
           {geo && (
             <GeoJSON
-// 修正: keyを追加して、データソースが変わるたびに再描画させる
-              key={geographyUrl ?? level} 
+              // 修正: keyを追加して、データソースが変わるたびに再描画させる
+              key={geographyUrl ?? level}
               data={geo}
               style={styleFeature}
               onEachFeature={(feature, layer) => {
