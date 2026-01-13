@@ -3,7 +3,14 @@
 import Image from "next/image";
 import FallbackImage from "./components/FallbackImage";
 import dynamic from "next/dynamic";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+} from "react";
 import { HOTELS } from "@/app/data/mockHotels";
 
 const MapPanel = dynamic(() => import("./components/MapPanel.client"), {
@@ -64,7 +71,107 @@ export default function HomePage() {
   const [region, setRegion] = useState<string | null>(null);
   const [prefecture, setPrefecture] = useState<string | null>(null);
 
-  // ホテル価格の最小・最大を算出
+  // リサイズ制御
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const draggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startLeftRef = useRef(0);
+  const [leftWidth, setLeftWidth] = useState<number | null>(null);
+  const [isLarge, setIsLarge] = useState(false);
+
+  // 一覧の幅に応じたカラム数制御
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const [listWidth, setListWidth] = useState<number>(0);
+  const cardMinWidth = 160; // 1枚あたりの理想的な最小幅
+  const columns = Math.max(1, Math.floor(listWidth / cardMinWidth));
+
+  useEffect(() => {
+    const check = () => setIsLarge(window.innerWidth >= 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  useEffect(() => {
+    if (!isLarge) return;
+    // 初期幅を設定（ビュー幅の60%）
+    if (leftWidth === null) {
+      setLeftWidth(Math.round(window.innerWidth * 0.6));
+    }
+  }, [isLarge, leftWidth]);
+
+  // ResizeObserver で一覧コンテナの幅を監視
+  useEffect(() => {
+    if (!listRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        setListWidth(w);
+      }
+    });
+    ro.observe(listRef.current as Element);
+    return () => ro.disconnect();
+  }, [isLarge, leftWidth]);
+
+  const onMove = useCallback((clientX: number) => {
+    if (!draggingRef.current || !containerRef.current) return;
+    const dx = clientX - startXRef.current;
+    const newLeft = startLeftRef.current + dx;
+    const min = 320; // 最小幅
+    const max = Math.max(480, window.innerWidth - 320);
+    const clamped = Math.max(min, Math.min(max, newLeft));
+    setLeftWidth(clamped);
+  }, []);
+
+  const onMouseMove = useCallback(
+    (e: MouseEvent) => onMove(e.clientX),
+    [onMove]
+  );
+  const onTouchMove = useCallback(
+    (e: TouchEvent) => onMove(e.touches[0].clientX),
+    [onMove]
+  );
+
+  useEffect(() => {
+    const onUp = () => {
+      if (draggingRef.current) draggingRef.current = false;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onUp);
+    };
+    return () => onUp();
+  }, [onMouseMove, onTouchMove]);
+
+  const startDrag = (clientX: number) => {
+    draggingRef.current = true;
+    startXRef.current = clientX;
+    startLeftRef.current = leftWidth ?? Math.round(window.innerWidth * 0.6);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener(
+      "mouseup",
+      () => {
+        draggingRef.current = false;
+        window.removeEventListener("mousemove", onMouseMove);
+      },
+      { once: true }
+    );
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener(
+      "touchend",
+      () => {
+        draggingRef.current = false;
+        window.removeEventListener("touchmove", onTouchMove);
+      },
+      { once: true }
+    );
+  };
+
+  const onHandleMouseDown = (e: React.MouseEvent) => startDrag(e.clientX);
+  const onHandleTouchStart = (e: React.TouchEvent) =>
+    startDrag(e.touches[0].clientX);
+
+  // ホテルデータ処理
   const { minPrice, maxPrice } = useMemo(() => {
     const prices = HOTELS.map((h) => Number(h.price)).filter(
       (p) => !Number.isNaN(p)
@@ -76,9 +183,6 @@ export default function HomePage() {
 
   const [priceMin, setPriceMin] = useState<number | null>(null);
   const [priceMax, setPriceMax] = useState<number | null>(null);
-  // デュアルハンドルの操作中ハンドル管理
-  const [activeHandle, setActiveHandle] = useState<"min" | "max" | null>(null);
-
   useEffect(() => {
     if (priceMin === null) setPriceMin(minPrice);
     if (priceMax === null) setPriceMax(maxPrice);
@@ -88,7 +192,6 @@ export default function HomePage() {
     const normalize = (s: string | null | undefined) => {
       if (!s) return null;
       const v = String(s).trim();
-      // 都・府・県の末尾を取り除いて比較（北海道の「道」は残す）
       return v.replace(/(都|府|県)$/, "");
     };
 
@@ -105,11 +208,9 @@ export default function HomePage() {
     if (priceMin != null && priceMax != null) {
       return base.filter((h) => h.price >= priceMin && h.price <= priceMax);
     }
-
     return base;
   }, [region, prefecture, priceMin, priceMax]);
 
-  // 開発時のみ: id 重複を警告
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
     const counts = new Map<number, number>();
@@ -117,15 +218,32 @@ export default function HomePage() {
     const dups = Array.from(counts.entries())
       .filter(([, c]) => c > 1)
       .map(([id]) => id);
-    if (dups.length) {
+    if (dups.length)
       console.warn("[HomePage] Duplicate hotel ids detected:", dups);
-    }
   }, [hotels]);
 
   return (
     <div className="min-h-screen w-full bg-slate-950 text-white">
-      <div className="h-screen w-full grid grid-cols-1 lg:grid-cols-[3fr_2fr]">
+      <div
+        ref={containerRef}
+        className="h-screen w-full grid grid-cols-1 lg:grid-cols-1"
+        style={
+          isLarge && leftWidth
+            ? { gridTemplateColumns: `${leftWidth}px 1fr` }
+            : undefined
+        }
+      >
         <div className="relative h-[70vh] w-full lg:h-screen lg:sticky lg:top-0">
+          {/* リサイズハンドル（ラージ画面時のみ表示） */}
+          <div
+            onMouseDown={onHandleMouseDown}
+            onTouchStart={onHandleTouchStart}
+            className="hidden lg:block absolute -right-1 top-0 h-full w-2 cursor-col-resize z-50"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize panel"
+          />
+
           <Suspense
             fallback={
               <div
@@ -215,7 +333,6 @@ export default function HomePage() {
                   <div>価格上限: ¥{priceMax?.toLocaleString()}</div>
                 </div>
                 <div className="mt-2 space-y-2">
-                  {/* デュアルハンドルを擬似的に実現：2つの range を重ねる */}
                   <div className="relative h-8">
                     <input
                       type="range"
@@ -229,7 +346,6 @@ export default function HomePage() {
                         const newMin = Math.min(v, maxV);
                         setPriceMin(newMin);
                       }}
-                      // 少し上下ずらして重なりを避け、両方操作可能にする
                       style={{ top: "0px" }}
                       className="absolute left-0 right-0 w-full appearance-none bg-transparent z-20"
                     />
@@ -248,9 +364,7 @@ export default function HomePage() {
                       style={{ top: "12px" }}
                       className="absolute left-0 right-0 w-full appearance-none bg-transparent z-10"
                     />
-                    {/* トラック */}
                     <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 bg-slate-700 rounded" />
-                    {/* 選択範囲ハイライト */}
                     <div
                       className="absolute top-1/2 h-1 -translate-y-1/2 bg-indigo-500 rounded"
                       style={{
@@ -267,7 +381,6 @@ export default function HomePage() {
                         }%`,
                       }}
                     />
-                    {/* サム（見た目のみ） */}
                     <div
                       className="absolute top-1/2 w-3 h-3 bg-white rounded-full shadow -translate-y-1/2"
                       style={{
@@ -294,7 +407,13 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <ul className="mt-6 grid gap-4 md:grid-cols-2">
+              <ul
+                ref={listRef}
+                className="mt-6 grid gap-4"
+                style={{
+                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                }}
+              >
                 {hotels.map((hotel) => (
                   <li
                     key={`${hotel.id}-${hotel.name}`}
