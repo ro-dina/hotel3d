@@ -49,6 +49,10 @@ type ZoomThresholds = {
   prefToJapanDown: number;
   prefToDetailUp: number;
   prefToDetailDown: number;
+  // 市区町村からさらに小字レベルへ上がる閾値
+  detailToSubUp: number;
+  // 小字から市区町村へ戻る閾値
+  detailToSubDown: number;
   detailToJapanDown: number;
 };
 
@@ -70,6 +74,10 @@ const DEFAULT_THRESHOLDS: ZoomThresholds = {
   prefToJapanDown: 15, // 日本全体→都道府県
   prefToDetailUp: 12, // 都道府県→市区町村
   prefToDetailDown: 12, // 市区町村→都道府県
+  // 市区町村から小字へ遷移する閾値（デフォルトは 14）
+  detailToSubUp: 14,
+  // 小字から市区町村へ戻る閾値
+  detailToSubDown: 13,
   detailToJapanDown: 14, // 市区町村→日本全体
 };
 
@@ -244,11 +252,18 @@ function MapController({
   return null;
 }
 
-type Level = "regions" | "prefecture" | "prefectureDetail" | "japan";
+type Level =
+  | "regions"
+  | "prefecture"
+  | "prefectureDetail"
+  | "subDetail"
+  | "japan";
 
 function determineLevel(zoom: number, thresholds: ZoomThresholds): Level {
   // レベル判定は「ズーム倍率だけ」に基づく（要件どおり）
   if (zoom >= thresholds.prefToJapanUp) return "japan";
+  // 市区町村よりさらに深い小字レベルへ遷移
+  if (zoom >= thresholds.detailToSubUp) return "subDetail";
   if (zoom >= thresholds.prefToDetailUp) return "prefectureDetail";
   if (zoom >= thresholds.regionsToPrefUp) return "prefecture";
   return "regions";
@@ -337,15 +352,16 @@ export default function MapPanel({
     const t = thresholds;
     // レベル判定はズーム倍率のみで決定する
     if (z >= t.prefToJapanUp) return "japan";
+    if (z >= t.detailToSubUp) return "subDetail";
     if (z >= t.prefToDetailUp) return "prefectureDetail";
     if (z >= t.regionsToPrefUp) return "prefecture";
     return "regions";
   }, [zoom, thresholds]);
-  // prefectureDetail以外のレベルになったら都道府県選択状態とキャッシュを必ず解除
+  // prefectureDetailおよびsubDetail以外のレベルになったら都道府県選択状態とキャッシュを必ず解除
   useEffect(() => {
-    if (level !== "prefectureDetail") {
+    if (level !== "prefectureDetail" && level !== "subDetail") {
       if (selectedPrefecture) setSelectedPrefecture(null);
-      // 詳細キャッシュもクリア（prefectureDetail以外では不要なため）
+      // 詳細キャッシュもクリア（prefectureDetail/subDetail以外では不要なため）
       detailCacheRef.current = {};
     }
   }, [level, selectedPrefecture]);
@@ -355,6 +371,7 @@ export default function MapPanel({
     if (
       level !== "prefecture" &&
       level !== "prefectureDetail" &&
+      level !== "subDetail" &&
       prefectureGeo
     ) {
       setPrefectureGeo(null);
@@ -387,7 +404,7 @@ export default function MapPanel({
   const geographyUrl = useMemo(() => {
     if (level === "regions") return versionedUrl.regions;
     if (level === "prefecture") return versionedUrl.prefecture;
-    if (level === "prefectureDetail") {
+    if (level === "prefectureDetail" || level === "subDetail") {
       // クリックで選択された都道府県を優先して読み込む。なければ中心位置から推定した名前を使用。
       const prefToLoad = selectedPrefecture ?? centerPrefectureName;
       if (prefToLoad) return versionedUrl.prefectureDetail(prefToLoad);
@@ -470,8 +487,12 @@ export default function MapPanel({
       };
     }
 
-    // 都道府県詳細レベルで画面内全都道府県を取得
-    if (level === "prefectureDetail" && prefectureGeo && mapRef.current) {
+    // 都道府県詳細／小字レベルで画面内全都道府県を取得
+    if (
+      (level === "prefectureDetail" || level === "subDetail") &&
+      prefectureGeo &&
+      mapRef.current
+    ) {
       const visiblePrefs = getVisiblePrefectures(mapRef.current, prefectureGeo);
       const uncachedPrefs = visiblePrefs.filter(
         (pref): pref is string =>
