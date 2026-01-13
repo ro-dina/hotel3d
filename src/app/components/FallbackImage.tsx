@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { IMAGE_LIST } from "@/app/data/imageList";
 
 type Props = {
@@ -19,38 +19,29 @@ export default function FallbackImage({
   width,
   height,
 }: Props) {
-  const [validSrc, setValidSrc] = useState<string>(src);
+  const [current, setCurrent] = useState<string>(src);
+  const [triedRandom, setTriedRandom] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    async function check() {
-      try {
-        const res = await fetch(src, { method: "HEAD" });
-        if (mounted && res.ok) {
-          setValidSrc(src);
-          return;
-        }
-      } catch {
-        // ignore
-      }
-      if (mounted && IMAGE_LIST.length) {
-        const idx = Math.floor(Math.random() * IMAGE_LIST.length);
-        setValidSrc(IMAGE_LIST[idx]);
-      }
-    }
-    check();
-    return () => {
-      mounted = false;
-    };
-  }, [src]);
+  function pickRandom() {
+    if (!IMAGE_LIST.length) return src;
+    const idx = Math.floor(Math.random() * IMAGE_LIST.length);
+    return IMAGE_LIST[idx];
+  }
 
   return (
     <Image
-      src={validSrc}
+      src={current}
       alt={alt}
-      className={className}
       width={width}
       height={height}
+      className={className}
+      onError={() => {
+        if (!triedRandom) {
+          setTriedRandom(true);
+          setCurrent(pickRandom());
+        }
+      }}
+      unoptimized
     />
   );
 }

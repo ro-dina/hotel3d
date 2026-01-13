@@ -63,15 +63,51 @@ const PREF_TO_REGION: Record<string, string> = {
 export default function HomePage() {
   const [region, setRegion] = useState<string | null>(null);
   const [prefecture, setPrefecture] = useState<string | null>(null);
+
+  // ホテル価格の最小・最大を算出
+  const { minPrice, maxPrice } = useMemo(() => {
+    const prices = HOTELS.map((h) => Number(h.price)).filter(
+      (p) => !Number.isNaN(p)
+    );
+    const min = prices.length ? Math.min(...prices) : 0;
+    const max = prices.length ? Math.max(...prices) : 0;
+    return { minPrice: min, maxPrice: max };
+  }, []);
+
+  const [priceMin, setPriceMin] = useState<number | null>(null);
+  const [priceMax, setPriceMax] = useState<number | null>(null);
+  // デュアルハンドルの操作中ハンドル管理
+  const [activeHandle, setActiveHandle] = useState<"min" | "max" | null>(null);
+
+  useEffect(() => {
+    if (priceMin === null) setPriceMin(minPrice);
+    if (priceMax === null) setPriceMax(maxPrice);
+  }, [minPrice, maxPrice]);
+
   const hotels = useMemo(() => {
-    if (prefecture) {
-      return HOTELS.filter((hotel) => hotel.pref === prefecture);
+    const normalize = (s: string | null | undefined) => {
+      if (!s) return null;
+      const v = String(s).trim();
+      // 都・府・県の末尾を取り除いて比較（北海道の「道」は残す）
+      return v.replace(/(都|府|県)$/, "");
+    };
+
+    const selPrefNorm = normalize(prefecture);
+    const base = selPrefNorm
+      ? HOTELS.filter((hotel) => {
+          const hNorm = normalize(hotel.pref);
+          return hNorm === selPrefNorm;
+        })
+      : region
+      ? HOTELS.filter((hotel) => hotel.region === region)
+      : HOTELS;
+
+    if (priceMin != null && priceMax != null) {
+      return base.filter((h) => h.price >= priceMin && h.price <= priceMax);
     }
-    if (region) {
-      return HOTELS.filter((hotel) => hotel.region === region);
-    }
-    return HOTELS;
-  }, [region, prefecture]);
+
+    return base;
+  }, [region, prefecture, priceMin, priceMax]);
 
   // 開発時のみ: id 重複を警告
   useEffect(() => {
@@ -170,6 +206,92 @@ export default function HomePage() {
                     クリア
                   </button>
                 )}
+              </div>
+
+              {/* 価格範囲フィルタ（下限・上限の2つのつまみ） */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-xs text-white/70">
+                  <div>価格下限: ¥{priceMin?.toLocaleString()}</div>
+                  <div>価格上限: ¥{priceMax?.toLocaleString()}</div>
+                </div>
+                <div className="mt-2 space-y-2">
+                  {/* デュアルハンドルを擬似的に実現：2つの range を重ねる */}
+                  <div className="relative h-8">
+                    <input
+                      type="range"
+                      min={minPrice}
+                      max={maxPrice}
+                      step={1000}
+                      value={priceMin ?? minPrice}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        const maxV = priceMax ?? maxPrice;
+                        const newMin = Math.min(v, maxV);
+                        setPriceMin(newMin);
+                      }}
+                      // 少し上下ずらして重なりを避け、両方操作可能にする
+                      style={{ top: "0px" }}
+                      className="absolute left-0 right-0 w-full appearance-none bg-transparent z-20"
+                    />
+                    <input
+                      type="range"
+                      min={minPrice}
+                      max={maxPrice}
+                      step={1000}
+                      value={priceMax ?? maxPrice}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        const minV = priceMin ?? minPrice;
+                        const newMax = Math.max(v, minV);
+                        setPriceMax(newMax);
+                      }}
+                      style={{ top: "12px" }}
+                      className="absolute left-0 right-0 w-full appearance-none bg-transparent z-10"
+                    />
+                    {/* トラック */}
+                    <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 bg-slate-700 rounded" />
+                    {/* 選択範囲ハイライト */}
+                    <div
+                      className="absolute top-1/2 h-1 -translate-y-1/2 bg-indigo-500 rounded"
+                      style={{
+                        left: `${
+                          (((priceMin ?? minPrice) - minPrice) /
+                            (maxPrice - minPrice)) *
+                          100
+                        }%`,
+                        right: `${
+                          100 -
+                          (((priceMax ?? maxPrice) - minPrice) /
+                            (maxPrice - minPrice)) *
+                            100
+                        }%`,
+                      }}
+                    />
+                    {/* サム（見た目のみ） */}
+                    <div
+                      className="absolute top-1/2 w-3 h-3 bg-white rounded-full shadow -translate-y-1/2"
+                      style={{
+                        left: `${
+                          (((priceMin ?? minPrice) - minPrice) /
+                            (maxPrice - minPrice)) *
+                          100
+                        }%`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                    />
+                    <div
+                      className="absolute top-1/2 w-3 h-3 bg-white rounded-full shadow -translate-y-1/2"
+                      style={{
+                        left: `${
+                          (((priceMax ?? maxPrice) - minPrice) /
+                            (maxPrice - minPrice)) *
+                          100
+                        }%`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
 
               <ul className="mt-6 grid gap-4 md:grid-cols-2">
