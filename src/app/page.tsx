@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import FallbackImage from "./components/FallbackImage";
 import dynamic from "next/dynamic";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { HOTELS } from "@/app/data/mockHotels";
@@ -177,13 +178,12 @@ export default function HomePage() {
                     key={`${hotel.id}-${hotel.name}`}
                     className="overflow-hidden rounded-2xl border border-white/20 bg-slate-900/70 shadow-lg shadow-black/60 transition hover:shadow-white/30"
                   >
-                    <Image
+                    <FallbackImage
                       src={hotel.imageUrl}
                       alt={hotel.name}
                       width={600}
                       height={400}
                       className="h-40 w-full object-cover"
-                      unoptimized
                     />
                     <div className="p-4">
                       <div className="text-sm font-semibold text-white">
