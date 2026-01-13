@@ -87,8 +87,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen w-full bg-slate-950 text-white">
-      <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-[3fr_2fr]">
-        <div className="relative h-[70vh] w-full lg:h-screen">
+      <div className="h-screen w-full grid grid-cols-1 lg:grid-cols-[3fr_2fr]">
+        <div className="relative h-[70vh] w-full lg:h-screen lg:sticky lg:top-0">
           <Suspense
             fallback={
               <div
