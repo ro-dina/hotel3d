@@ -28,7 +28,7 @@ export default function Header() {
           <Link href="/">ホーム</Link>
           <Link href="/about">このサイトについて</Link>
         </nav>
-        <form onSubmit={onSubmit} className="ml-auto flex items-center gap-2">
+        {/* <form onSubmit={onSubmit} className="ml-auto flex items-center gap-2">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -36,7 +36,7 @@ export default function Header() {
             className="border rounded px-3 py-1"
           />
           <button className="px-3 py-1 bg-blue-600 text-white rounded">検索</button>
-        </form>
+        </form> */}
       </div>
     </header>
   );
