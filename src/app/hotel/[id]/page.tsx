@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { HOTELS } from "@/data/mockHotels";
+import { HOTELS } from "@/app/data/mockHotels";
 import type { Hotel } from "@/types/Hotel";
 
 export async function generateStaticParams() {
