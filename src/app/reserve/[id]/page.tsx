@@ -1,4 +1,4 @@
-import { HOTELS } from "@/data/mockHotels";
+import { HOTELS } from "@/app/data/mockHotels";
 import type { Hotel } from "@/types/Hotel";
 import ReserveClient from "./ReserveClient";
 

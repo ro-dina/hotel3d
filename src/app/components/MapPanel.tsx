@@ -30,8 +30,8 @@ type MapDimensions = {
 type MapPanelThresholds = Partial<ZoomThresholds>;
 
 export type MapPanelProps = {
-  value: string | null;
-  onPick: (region: string | null) => void;
+  value?: string | null;
+  onPick?: (region: string | null) => void;
   onPickPref?: (pref: string | null) => void;
   maxZoom?: number;
   thresholds?: MapPanelThresholds;
@@ -589,17 +589,19 @@ export default function MapPanel({
     feature?: RsmGeo,
     layer?: unknown
   ) => {
+    // onPick / onPickPref がどちらも指定されていない場合は何もしない
+    if (!onPick && !onPickPref) return;
     // 名前を先に決定
     const region = getRegionName(props);
     const pref = getPrefName(props) ?? region;
     if (level === "regions") {
-      onPick(region ?? null);
+      onPick?.(region ?? null);
     } else if (level === "prefecture") {
       if (onPickPref) onPickPref(pref ?? null);
-      else onPick(pref ?? null);
+      else onPick?.(pref ?? null);
     } else {
       if (onPickPref) onPickPref(pref ?? null);
-      else onPick(pref ?? null);
+      else onPick?.(pref ?? null);
     }
     // クリックで都道府県名が得られたら（都道府県表示または詳細表示時のみ）明示的に選択状態にする
     // 地方レベルでのクリックは selectedPrefecture に設定しない（存在しない都道府県ファイルを参照するのを防ぐ）

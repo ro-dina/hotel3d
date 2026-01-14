@@ -1,10 +1,12 @@
-'use client';
+"use client";
+
 import React, { Suspense, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
-import { Hotel } from "@/types/Hotel";
-import { HOTELS } from "@/data/mockHotels";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+
+import type { Hotel } from "@/types/Hotel";
+import { HOTELS } from "@/app/data/mockHotels";
 
 export default function HomePage() {
   const [regionParam, setRegionParam] = useState<string>("");

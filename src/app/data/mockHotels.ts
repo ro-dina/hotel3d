@@ -1,6 +1,5 @@
 // src/data/mockHotels.ts
 import type { Hotel } from "@/types/Hotel";
-import { truncateByDomain } from "recharts/types/util/ChartUtils";
 
 // page.tsx が import している名前に合わせて HOTELS をエクスポート
 export const HOTELS: Hotel[] = [
@@ -2041,7 +2040,7 @@ export const HOTELS: Hotel[] = [
     region: "関西",
     type: "hotel",
     breakfast: false,
-    imageUrl: "/images/ Kadoma1.jpg",
+    imageUrl: "/images/Kadoma1.jpg",
     available: true 
   },
   {
