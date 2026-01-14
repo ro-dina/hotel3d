@@ -186,7 +186,7 @@ export default function HomePage() {
               </div>
             </aside>
 
-            {/* ===== 右：検索結果 ===== */}
+            {/* ===== 右：結果 ===== */}
             <section className="md:col-span-9">
               {filteredHotels.length === 0 ? (
                 <p className="text-gray-700">該当するホテルがありません。</p>
