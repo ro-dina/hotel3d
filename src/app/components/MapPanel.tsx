@@ -516,6 +516,8 @@ export default function MapPanel({
             : Promise.resolve(null)
         )
       ).then(() => {
+        // --- DEBUG: PrefectureDetail merge start ---
+        console.log("[MapPanel] PrefectureDetail merge start: visiblePrefs =", visiblePrefs);
         if (!isActive) return;
         const allCollections = visiblePrefs
           .map((pref) => (pref ? detailCacheRef.current[pref] : null))
@@ -524,6 +526,8 @@ export default function MapPanel({
           type: "FeatureCollection",
           features: allCollections.flatMap((c) => c.features),
         };
+        // --- DEBUG: PrefDetail merged feature count ---
+        console.log("[MapPanel] PrefDetail merged feature count:", merged.features.length);
         setGeo(merged);
       });
       return () => {
@@ -535,6 +539,8 @@ export default function MapPanel({
     if (level === "prefectureDetail" && centerPrefectureName) {
       const cached = detailCacheRef.current[centerPrefectureName];
       if (cached) {
+        // --- DEBUG: Using cached collection ---
+        console.log("[MapPanel] Using cached collection for:", centerPrefectureName, "feature count:", cached.features.length);
         setGeo(cached);
         return () => {
           isActive = false;
@@ -543,14 +549,21 @@ export default function MapPanel({
       }
     }
 
+    // --- DEBUG FETCH START ---
+    console.log("[MapPanel] Fetch start:", geographyUrl, "level:", level);
     fetch(geographyUrl, { cache: "no-store", signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // --- DEBUG: Fetch response ---
+        console.log("[MapPanel] Fetch response:", geographyUrl, "status:", res.status);
         return res.json();
       })
       .then((data: unknown) => {
+        console.log("[MapPanel] Raw data received from:", geographyUrl, data && typeof data === "object" ? "OK" : "INVALID");
         if (!isActive) return;
         const collection = parseMapData(data);
+        // --- DEBUG: Parsed feature count ---
+        console.log("[MapPanel] Parsed feature count:", collection.features.length, "level:", level);
         if (level === "prefecture") {
           setPrefectureGeo(collection);
         }
@@ -565,8 +578,8 @@ export default function MapPanel({
         setGeo(collection);
       })
       .catch((err) => {
+        console.error("[MapPanel] FETCH ERROR:", geographyUrl, err);
         if ((err as Error).name === "AbortError") return;
-        console.error(err);
         if (isActive) setGeo(null);
       });
 

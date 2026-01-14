@@ -183,6 +183,8 @@ export default function HomePage() {
 
   const [priceMin, setPriceMin] = useState<number | null>(null);
   const [priceMax, setPriceMax] = useState<number | null>(null);
+  const [onlyBreakfast, setOnlyBreakfast] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<string>("");
   useEffect(() => {
     if (priceMin === null) setPriceMin(minPrice);
     if (priceMax === null) setPriceMax(maxPrice);
@@ -196,7 +198,7 @@ export default function HomePage() {
     };
 
     const selPrefNorm = normalize(prefecture);
-    const base = selPrefNorm
+    let base = selPrefNorm
       ? HOTELS.filter((hotel) => {
           const hNorm = normalize(hotel.pref);
           return hNorm === selPrefNorm;
@@ -206,10 +208,19 @@ export default function HomePage() {
       : HOTELS;
 
     if (priceMin != null && priceMax != null) {
-      return base.filter((h) => h.price >= priceMin && h.price <= priceMax);
+      base = base.filter((h) => h.price >= priceMin && h.price <= priceMax);
     }
+
+    if (onlyBreakfast) {
+      base = base.filter((h) => h.breakfast);
+    }
+
+    if (typeFilter) {
+      base = base.filter((h) => h.type === typeFilter);
+    }
+
     return base;
-  }, [region, prefecture, priceMin, priceMax]);
+  }, [region, prefecture, priceMin, priceMax, onlyBreakfast, typeFilter]);
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
@@ -253,6 +264,7 @@ export default function HomePage() {
             }
           >
             <MapPanel
+              key="static-map"
               value={prefecture ?? region}
               onPick={(regionName) => {
                 setPrefecture(null);
@@ -286,6 +298,10 @@ export default function HomePage() {
                     onClick={() => {
                       setPrefecture(null);
                       setRegion(null);
+                      setPriceMin(minPrice);
+                      setPriceMax(maxPrice);
+                      setOnlyBreakfast(false);
+                      setTypeFilter("");
                     }}
                   >
                     フィルタ解除
@@ -319,6 +335,10 @@ export default function HomePage() {
                     onClick={() => {
                       setPrefecture(null);
                       setRegion(null);
+                      setPriceMin(minPrice);
+                      setPriceMax(maxPrice);
+                      setOnlyBreakfast(false);
+                      setTypeFilter("");
                     }}
                   >
                     クリア
@@ -404,6 +424,43 @@ export default function HomePage() {
                       }}
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* 朝食・宿泊スタイルの絞り込み */}
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-white/80">
+                <button
+                  type="button"
+                  onClick={() => setOnlyBreakfast((prev) => !prev)}
+                  className={`rounded-full border px-3 py-1 font-medium transition ${
+                    onlyBreakfast
+                      ? "border-amber-300 bg-amber-400/20 text-amber-50"
+                      : "border-white/30 bg-white/10 text-white/80 hover:border-amber-200 hover:text-amber-100"
+                  }`}
+                >
+                  朝食付きのみ
+                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-white/60">宿泊スタイル:</span>
+                  {[
+                    { value: "", label: "すべて" },
+                    { value: "hotel", label: "ホテル" },
+                    { value: "ryokan", label: "旅館" },
+                    { value: "minpaku", label: "民泊" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value || "all"}
+                      type="button"
+                      onClick={() => setTypeFilter(opt.value)}
+                      className={`rounded-full border px-3 py-1 text-[11px] font-medium transition ${
+                        typeFilter === opt.value
+                          ? "border-indigo-300 bg-indigo-500/30 text-indigo-50"
+                          : "border-white/30 bg-white/5 text-white/70 hover:border-indigo-200 hover:text-indigo-100"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

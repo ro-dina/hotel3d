@@ -4083,7 +4083,7 @@ export const HOTELS: Hotel[] = [
     available: true
   },
   {
-    id: 340,
+    id: 435,
     name: "日光東照宮参拝ホテル",
     description: "日光東照宮近くの便利なホテル。",
     price: 18000,
