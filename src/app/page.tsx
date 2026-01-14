@@ -233,7 +233,7 @@ export default function HomePage() {
             : undefined
         }
       >
-        <div className="relative h-[70vh] w-full lg:h-screen lg:sticky lg:top-0">
+        <div className="relative h-[50vh] w-full lg:h-screen lg:sticky lg:top-0">
           {/* リサイズハンドル（ラージ画面時のみ表示） */}
           <div
             onMouseDown={onHandleMouseDown}
