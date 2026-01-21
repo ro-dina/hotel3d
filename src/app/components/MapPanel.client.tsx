@@ -57,14 +57,14 @@ type JPProps = GeoJsonProperties & {
 type RsmGeo = Feature<Geometry, JPProps>;
 
 const DEFAULT_THRESHOLDS: ZoomThresholds = {
-  regionsToPrefUp: 8.5,
-  regionsToPrefDown: 7.0,
-  prefToJapanUp: 16,
+  regionsToPrefUp: 7.0,
+  regionsToPrefDown: 6.0,
+  prefToJapanUp: 30,
   prefToJapanDown: 15,
-  prefToDetailUp: 12,
-  prefToDetailDown: 12,
-  detailToSubUp: 14,
-  detailToSubDown: 13,
+  prefToDetailUp: 9.5,
+  prefToDetailDown: 8.5,
+  detailToSubUp: 13,
+  detailToSubDown: 12,
   detailToJapanDown: 14,
 };
 
@@ -87,8 +87,8 @@ const TARGET_KEYS = [
 
 const REGION_KEYS = ["region", "region_name", "地方名"] as const;
 const PREF_KEYS = [
-  "N03_004",
   "N03_001",
+  "N03_004",
   "N03_005",
   "name",
   "NAME",
@@ -389,9 +389,23 @@ export default function MapPanel({
     const bounds = map.getBounds();
     const sw = [bounds.getSouthWest().lng, bounds.getSouthWest().lat];
     const ne = [bounds.getNorthEast().lng, bounds.getNorthEast().lat];
+    const center = map.getCenter();
+    const centerPoint: Point = [center.lng, center.lat];
+
     const features = prefectureGeo.features;
     const result: string[] = [];
+
     for (const feature of features) {
+      // Check if feature contains the center point (handles large polygons covering the view)
+      if (containsPointInFeature(feature, centerPoint)) {
+        const name = getName(feature.properties ?? {});
+        if (name) {
+          result.push(name);
+          continue; // Already added
+        }
+      }
+
+      // Existing check: is any vertex inside the bounds?
       if (feature.geometry.type === "Polygon") {
         for (const ring of feature.geometry.coordinates as number[][][]) {
           for (const pt of ring) {
@@ -574,24 +588,28 @@ export default function MapPanel({
         const [lon, lat] = geoCentroid(feature);
         const targetLatLng: [number, number] = [lat, lon];
 
+        // Determine effective max zoom
+        const effectiveMaxZoom = maxZoom;
+
         let targetZoom: number;
         if (level === "regions") {
           targetZoom = Math.min(
-            Math.max(zoom, thresholds.regionsToPrefUp + 1.5),
-            maxZoom
+            Math.max(zoom, thresholds.regionsToPrefUp + 1.0),
+            effectiveMaxZoom
           );
         } else if (level === "prefecture") {
           targetZoom = Math.min(
             Math.max(zoom, thresholds.prefToDetailUp + 0.5),
-            maxZoom
+            effectiveMaxZoom
           );
         } else if (level === "prefectureDetail") {
           targetZoom = Math.min(
-            Math.max(zoom, thresholds.prefToJapanUp + 0.5),
-            maxZoom
+            Math.max(zoom, 10.5),
+            effectiveMaxZoom
           );
         } else {
-          targetZoom = Math.min(zoom * 1.2, maxZoom);
+          // Gentler zoom increment for deep levels
+          targetZoom = Math.min(zoom + 0.5, effectiveMaxZoom);
         }
 
         setCenter(targetLatLng);

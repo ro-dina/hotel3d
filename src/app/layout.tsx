@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/app/components/Header";
+import ChatWidget from "@/app/components/ChatWidget";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({
           <Header />
         </Suspense>
         <main className="min-h-screen w-full">{children}</main>
+        <ChatWidget />
       </body>
     </html>
   );
