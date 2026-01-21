@@ -76,6 +76,13 @@ export default function HomePage() {
     lng: number;
     zoom?: number;
   } | null>(null);
+  const [mapBounds, setMapBounds] = useState<{
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  } | null>(null);
+  const [useMapBounds, setUseMapBounds] = useState(false);
 
   // リサイズ制御
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -225,8 +232,27 @@ export default function HomePage() {
       base = base.filter((h) => h.type === typeFilter);
     }
 
+    if (useMapBounds && mapBounds) {
+      base = base.filter(
+        (h) =>
+          h.lat <= mapBounds.north &&
+          h.lat >= mapBounds.south &&
+          h.lng <= mapBounds.east &&
+          h.lng >= mapBounds.west
+      );
+    }
+
     return base;
-  }, [region, prefecture, priceMin, priceMax, onlyBreakfast, typeFilter]);
+  }, [
+    region,
+    prefecture,
+    priceMin,
+    priceMax,
+    onlyBreakfast,
+    typeFilter,
+    useMapBounds,
+    mapBounds,
+  ]);
 
   const markers = useMemo(
     () =>
@@ -304,6 +330,7 @@ export default function HomePage() {
               selectedMarkerId={focusedHotelId}
               focusLocation={focusLocation}
               showMarkersAtZoom={8.5}
+              onViewportChange={(bounds) => setMapBounds(bounds)}
               maxZoom={20}
               panelClassName="absolute inset-0"
               mapWrapperClassName="absolute inset-0"
@@ -328,6 +355,8 @@ export default function HomePage() {
                       setPriceMax(maxPrice);
                       setOnlyBreakfast(false);
                       setTypeFilter("");
+                      setUseMapBounds(false);
+                      setMapBounds(null);
                     }}
                   >
                     フィルタ解除
@@ -466,6 +495,30 @@ export default function HomePage() {
                 >
                   朝食付きのみ
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!mapBounds) return;
+                    setUseMapBounds(true);
+                  }}
+                  disabled={!mapBounds}
+                  className={`rounded-full border px-3 py-1 font-medium transition ${
+                    useMapBounds
+                      ? "border-sky-300 bg-sky-400/20 text-sky-50"
+                      : "border-white/30 bg-white/10 text-white/80 hover:border-sky-200 hover:text-sky-100"
+                  }`}
+                >
+                  この範囲で検索
+                </button>
+                {useMapBounds && (
+                  <button
+                    type="button"
+                    onClick={() => setUseMapBounds(false)}
+                    className="rounded-full border border-white/30 bg-white/10 px-3 py-1 font-medium text-white/80 transition hover:border-white/60 hover:text-white"
+                  >
+                    範囲解除
+                  </button>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-white/60">宿泊スタイル:</span>
                   {[

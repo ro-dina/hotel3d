@@ -34,6 +34,13 @@ type FocusLocation = {
   zoom?: number;
 };
 
+type MapBounds = {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+};
+
 export type MapPanelProps = {
   value?: string | null;
   onPick?: (region: string | null) => void;
@@ -44,6 +51,7 @@ export type MapPanelProps = {
   selectedMarkerId?: MapMarker["id"] | null;
   showMarkersAtZoom?: number;
   focusLocation?: FocusLocation | null;
+  onViewportChange?: (bounds: MapBounds) => void;
   mapDimensions?: MapDimensions;
   panelClassName?: string;
   mapWrapperClassName?: string;
@@ -252,6 +260,7 @@ export default function MapPanel({
   selectedMarkerId,
   showMarkersAtZoom = 8.5,
   focusLocation,
+  onViewportChange,
   mapDimensions,
   panelClassName,
   mapWrapperClassName,
@@ -312,6 +321,15 @@ export default function MapPanel({
       const z = map.getZoom();
       setCenter([c.lat, c.lng]);
       setZoom(z);
+      if (onViewportChange) {
+        const bounds = map.getBounds();
+        onViewportChange({
+          north: bounds.getNorth(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          west: bounds.getWest(),
+        });
+      }
     });
 
     return () => {
