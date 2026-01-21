@@ -70,6 +70,12 @@ const PREF_TO_REGION: Record<string, string> = {
 export default function HomePage() {
   const [region, setRegion] = useState<string | null>(null);
   const [prefecture, setPrefecture] = useState<string | null>(null);
+  const [focusedHotelId, setFocusedHotelId] = useState<number | null>(null);
+  const [focusLocation, setFocusLocation] = useState<{
+    lat: number;
+    lng: number;
+    zoom?: number;
+  } | null>(null);
 
   // リサイズ制御
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -222,6 +228,22 @@ export default function HomePage() {
     return base;
   }, [region, prefecture, priceMin, priceMax, onlyBreakfast, typeFilter]);
 
+  const markers = useMemo(
+    () =>
+      hotels.map((hotel) => ({
+        id: hotel.id,
+        lat: hotel.lat,
+        lng: hotel.lng,
+        label: hotel.name,
+      })),
+    [hotels]
+  );
+
+  const handleHotelFocus = useCallback((hotel: (typeof hotels)[number]) => {
+    setFocusedHotelId(hotel.id);
+    setFocusLocation({ lat: hotel.lat, lng: hotel.lng, zoom: 9.5 });
+  }, []);
+
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
     const counts = new Map<number, number>();
@@ -278,6 +300,10 @@ export default function HomePage() {
                   setRegion(null);
                 }
               }}
+              markers={markers}
+              selectedMarkerId={focusedHotelId}
+              focusLocation={focusLocation}
+              showMarkersAtZoom={8.5}
               maxZoom={20}
               panelClassName="absolute inset-0"
               mapWrapperClassName="absolute inset-0"
@@ -474,7 +500,12 @@ export default function HomePage() {
                 {hotels.map((hotel) => (
                   <li
                     key={`${hotel.id}-${hotel.name}`}
-                    className="overflow-hidden rounded-2xl border border-white/20 bg-slate-900/70 shadow-lg shadow-black/60 transition hover:shadow-white/30"
+                    className="cursor-pointer overflow-hidden rounded-2xl border border-white/20 bg-slate-900/70 shadow-lg shadow-black/60 transition hover:shadow-white/30"
+                    onClick={(event) => {
+                      const target = event.target as HTMLElement | null;
+                      if (target?.closest("a")) return;
+                      handleHotelFocus(hotel);
+                    }}
                   >
                     <FallbackImage
                       src={hotel.imageUrl}

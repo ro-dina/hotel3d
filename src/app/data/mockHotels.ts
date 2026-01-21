@@ -1,8 +1,122 @@
 // src/data/mockHotels.ts
 import type { Hotel } from "@/types/Hotel";
 
+type BaseCoord = { lat: number; lng: number };
+
+const PREF_COORDS: Record<string, BaseCoord> = {
+  北海道: { lat: 43.0642, lng: 141.3469 },
+  青森: { lat: 40.8244, lng: 140.7406 },
+  岩手: { lat: 39.7036, lng: 141.1527 },
+  宮城: { lat: 38.2682, lng: 140.8694 },
+  秋田: { lat: 39.7186, lng: 140.1024 },
+  山形: { lat: 38.2404, lng: 140.3633 },
+  福島: { lat: 37.7503, lng: 140.4676 },
+  茨城: { lat: 36.3418, lng: 140.4468 },
+  栃木: { lat: 36.5657, lng: 139.8836 },
+  群馬: { lat: 36.3912, lng: 139.0609 },
+  埼玉: { lat: 35.8617, lng: 139.6455 },
+  千葉: { lat: 35.6051, lng: 140.1233 },
+  東京: { lat: 35.6895, lng: 139.6917 },
+  神奈川: { lat: 35.4478, lng: 139.6425 },
+  新潟: { lat: 37.9024, lng: 139.0232 },
+  富山: { lat: 36.6953, lng: 137.2113 },
+  石川: { lat: 36.5947, lng: 136.6256 },
+  福井: { lat: 36.0652, lng: 136.2216 },
+  山梨: { lat: 35.6642, lng: 138.5684 },
+  長野: { lat: 36.6513, lng: 138.1811 },
+  岐阜: { lat: 35.3912, lng: 136.7223 },
+  静岡: { lat: 34.9769, lng: 138.3831 },
+  愛知: { lat: 35.1802, lng: 136.9066 },
+  三重: { lat: 34.7303, lng: 136.5086 },
+  滋賀: { lat: 35.0045, lng: 135.8686 },
+  京都: { lat: 35.0116, lng: 135.7681 },
+  大阪: { lat: 34.6937, lng: 135.5023 },
+  兵庫: { lat: 34.6901, lng: 135.1955 },
+  奈良: { lat: 34.6851, lng: 135.8048 },
+  和歌山: { lat: 34.2260, lng: 135.1675 },
+  鳥取: { lat: 35.5039, lng: 134.2383 },
+  島根: { lat: 35.4723, lng: 133.0505 },
+  岡山: { lat: 34.6618, lng: 133.9344 },
+  広島: { lat: 34.3853, lng: 132.4553 },
+  山口: { lat: 34.1859, lng: 131.4714 },
+  徳島: { lat: 34.0703, lng: 134.5548 },
+  香川: { lat: 34.3401, lng: 134.0434 },
+  愛媛: { lat: 33.8416, lng: 132.7657 },
+  高知: { lat: 33.5597, lng: 133.5311 },
+  福岡: { lat: 33.5902, lng: 130.4017 },
+  佐賀: { lat: 33.2635, lng: 130.3009 },
+  長崎: { lat: 32.7503, lng: 129.8777 },
+  熊本: { lat: 32.7898, lng: 130.7417 },
+  大分: { lat: 33.2382, lng: 131.6126 },
+  宮崎: { lat: 31.9111, lng: 131.4239 },
+  鹿児島: { lat: 31.5602, lng: 130.5581 },
+  沖縄: { lat: 26.2124, lng: 127.6809 },
+};
+
+const REGION_COORDS: Record<string, BaseCoord> = {
+  "北海道": { lat: 43.3, lng: 142.7 },
+  "北海道・東北": { lat: 41.4, lng: 141.2 },
+  "東北": { lat: 39.4, lng: 140.6 },
+  "関東": { lat: 35.9, lng: 139.6 },
+  "中部": { lat: 36.1, lng: 137.9 },
+  "北陸": { lat: 36.6, lng: 136.6 },
+  "近畿": { lat: 34.9, lng: 135.5 },
+  "関西": { lat: 34.9, lng: 135.5 },
+  "中国": { lat: 34.6, lng: 133.6 },
+  "四国": { lat: 33.6, lng: 133.4 },
+  "九州": { lat: 32.8, lng: 130.8 },
+  "沖縄": { lat: 26.2, lng: 127.7 },
+};
+
+const JITTER_LAT = 0.25;
+const JITTER_LNG = 0.25;
+
+const hashString = (value: string): number => {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+};
+
+const mulberry32 = (seed: number) => {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6d2b79f5;
+    let r = t;
+    r = Math.imul(r ^ (r >>> 15), r | 1);
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const getBaseCoord = (pref?: string, region?: string): BaseCoord => {
+  if (pref && PREF_COORDS[pref]) {
+    return PREF_COORDS[pref];
+  }
+  if (region && REGION_COORDS[region]) {
+    return REGION_COORDS[region];
+  }
+  return { lat: 36.2048, lng: 138.2529 };
+};
+
+const deriveLatLng = (hotel: Omit<Hotel, "lat" | "lng">): BaseCoord => {
+  const seed = hashString(
+    `${hotel.id}-${hotel.pref ?? ""}-${hotel.region ?? ""}-${hotel.name}`
+  );
+  const rand = mulberry32(seed);
+  const base = getBaseCoord(hotel.pref, hotel.region);
+  const latOffset = (rand() - 0.5) * JITTER_LAT;
+  const lngOffset = (rand() - 0.5) * JITTER_LNG;
+  return {
+    lat: base.lat + latOffset,
+    lng: base.lng + lngOffset,
+  };
+};
+
 // page.tsx が import している名前に合わせて HOTELS をエクスポート
-export const HOTELS: Hotel[] = [
+const RAW_HOTELS: Array<Omit<Hotel, "lat" | "lng">> = [
   {
     id: 1,
     name: "京都グランドホテル",
@@ -5222,4 +5336,9 @@ export const HOTELS: Hotel[] = [
     imageUrl: "/images/golden_kamui1.jpg",
     available: true
   }
-]; 
+];
+
+export const HOTELS: Hotel[] = RAW_HOTELS.map((hotel) => ({
+  ...hotel,
+  ...deriveLatLng(hotel),
+}));

@@ -21,12 +21,29 @@ type MapDimensions = {
 
 type MapPanelThresholds = Partial<ZoomThresholds>;
 
+type MapMarker = {
+  id: string | number;
+  lat: number;
+  lng: number;
+  label?: string;
+};
+
+type FocusLocation = {
+  lat: number;
+  lng: number;
+  zoom?: number;
+};
+
 export type MapPanelProps = {
   value?: string | null;
   onPick?: (region: string | null) => void;
   onPickPref?: (pref: string | null) => void;
   maxZoom?: number;
   thresholds?: MapPanelThresholds;
+  markers?: MapMarker[];
+  selectedMarkerId?: MapMarker["id"] | null;
+  showMarkersAtZoom?: number;
+  focusLocation?: FocusLocation | null;
   mapDimensions?: MapDimensions;
   panelClassName?: string;
   mapWrapperClassName?: string;
@@ -231,6 +248,10 @@ export default function MapPanel({
   onPickPref,
   maxZoom = 12,
   thresholds: thresholdsOverride,
+  markers,
+  selectedMarkerId,
+  showMarkersAtZoom = 8.5,
+  focusLocation,
   mapDimensions,
   panelClassName,
   mapWrapperClassName,
@@ -240,6 +261,7 @@ export default function MapPanel({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const geoLayerRef = useRef<L.GeoJSON | null>(null);
+  const markerLayerRef = useRef<L.LayerGroup | null>(null);
 
   const [center, setCenter] = useState<[number, number]>([37.5, 139.0]);
   const [zoom, setZoom] = useState(4.5);
@@ -317,6 +339,15 @@ export default function MapPanel({
       map.setView(center, zoom, { animate: true });
     }
   }, [center, zoom]);
+
+  useEffect(() => {
+    if (!focusLocation) return;
+    const nextCenter: [number, number] = [focusLocation.lat, focusLocation.lng];
+    setCenter(nextCenter);
+    if (typeof focusLocation.zoom === "number") {
+      setZoom((prev) => Math.min(Math.max(prev, focusLocation.zoom), maxZoom));
+    }
+  }, [focusLocation, maxZoom]);
 
 
   // --- Logic for Levels and Data Fetching ---
@@ -658,6 +689,44 @@ export default function MapPanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geo, value]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+
+    if (markerLayerRef.current) {
+      markerLayerRef.current.remove();
+      markerLayerRef.current = null;
+    }
+
+    if (!markers || markers.length === 0) return;
+    if (zoom < showMarkersAtZoom) return;
+
+    const layer = L.layerGroup();
+    for (const marker of markers) {
+      const isSelected =
+        selectedMarkerId !== null &&
+        selectedMarkerId !== undefined &&
+        marker.id === selectedMarkerId;
+      const circle = L.circleMarker([marker.lat, marker.lng], {
+        radius: isSelected ? 8 : 6,
+        color: isSelected ? "#f97316" : "#2563eb",
+        fillColor: isSelected ? "#fb923c" : "#60a5fa",
+        fillOpacity: 0.9,
+        weight: 1,
+      });
+      if (marker.label) {
+        circle.bindTooltip(marker.label, {
+          direction: "top",
+          offset: [0, -6],
+          opacity: 0.9,
+        });
+      }
+      circle.addTo(layer);
+    }
+    layer.addTo(map);
+    markerLayerRef.current = layer;
+  }, [markers, selectedMarkerId, showMarkersAtZoom, zoom]);
 
 
   const { width = 520, height = 420 } = mapDimensions ?? {};
