@@ -344,8 +344,9 @@ export default function MapPanel({
     if (!focusLocation) return;
     const nextCenter: [number, number] = [focusLocation.lat, focusLocation.lng];
     setCenter(nextCenter);
-    if (typeof focusLocation.zoom === "number") {
-      setZoom((prev) => Math.min(Math.max(prev, focusLocation.zoom), maxZoom));
+    const targetZoom = focusLocation.zoom;
+    if (typeof targetZoom === "number") {
+      setZoom((prev) => Math.min(Math.max(prev, targetZoom), maxZoom));
     }
   }, [focusLocation, maxZoom]);
 
