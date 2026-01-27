@@ -82,8 +82,12 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
         <iframe
           ref={frameRef}
           id="unityFrame"
-          // ローカルの WebGL を使って検証する（本番は GitHub Pages 側）
-          src={`/view3d/WebGLBuild/index.html?unityObject=HotelAutoWarpReceiver`}
+          // 本番は GitHub Pages / ローカルは public 配下の WebGL を参照
+          src={`${
+            process.env.NODE_ENV === "production"
+              ? "https://ro-dina.github.io/hotel3d/unity/WebGLBuild/index.html"
+              : "/view3d/WebGLBuild/index.html"
+          }?unityObject=HotelAutoWarpReceiver`}
           className="w-full h-full"
           allowFullScreen
         />
