@@ -40,6 +40,7 @@ jobs:
           mkdir -p site/unity
           unzip -o tmp/WebGLBuild.zip -d site/unity
           rm -rf site/unity/__MACOSX || true
+          touch site/.nojekyll
           ls -lah site/unity | head -50
 
       - name: Setup Pages
