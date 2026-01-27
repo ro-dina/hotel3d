@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
 jobs:
   extract:
     runs-on: ubuntu-latest
@@ -11,6 +14,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download Unity zip
         run: |
@@ -20,8 +25,9 @@ jobs:
 
       - name: Unzip Unity build
         run: |
+          rm -rf docs/unity
           mkdir -p docs/unity
-          unzip tmp/WebGLBuild.zip -d docs/unity
+          unzip -o tmp/WebGLBuild.zip -d docs/unity
 
       - name: Commit extracted files
         run: |
@@ -29,4 +35,4 @@ jobs:
           git config user.email "actions@github.com"
           git add docs/unity
           git commit -m "Extract Unity WebGL build ${{ github.event.release.tag_name }}" || echo "No changes"
-          git push
+          git push origin main
