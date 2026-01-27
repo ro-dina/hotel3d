@@ -39,6 +39,14 @@ jobs:
           rm -rf site
           mkdir -p site/unity
           unzip -o tmp/WebGLBuild.zip -d site/unity
+          # Normalize output to site/unity/WebGLBuild/** so URL is /unity/WebGLBuild/index.html
+          if [ -f "site/unity/index.html" ] && [ ! -f "site/unity/WebGLBuild/index.html" ]; then
+            mkdir -p site/unity/WebGLBuild
+            # Move all extracted files into WebGLBuild
+            shopt -s dotglob
+            mv site/unity/* site/unity/WebGLBuild/ || true
+            shopt -u dotglob
+          fi
           rm -rf site/unity/__MACOSX || true
           touch site/.nojekyll
           ls -lah site/unity | head -50

@@ -82,8 +82,8 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
         <iframe
           ref={frameRef}
           id="unityFrame"
-          // URL から Unity 側で id を取得する想定
-          src={`https://ro-dina.github.io/hotel3d/unity/WebGLBuild/index.html?unityObject=HotelAutoWarpReceiver&id=${encodeURIComponent(id)}`}
+          // ローカルの WebGL を使って検証する（本番は GitHub Pages 側）
+          src={`/view3d/WebGLBuild/index.html?unityObject=HotelAutoWarpReceiver`}
           className="w-full h-full"
           allowFullScreen
         />
