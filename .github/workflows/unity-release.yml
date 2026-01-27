@@ -1,0 +1,32 @@
+name: Extract Unity WebGL Build
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download Unity zip
+        run: |
+          mkdir -p tmp
+          curl -L -o tmp/WebGLBuild.zip \
+            https://github.com/ro-dina/hotel3d/releases/download/${{ github.event.release.tag_name }}/WebGLBuild.zip
+
+      - name: Unzip Unity build
+        run: |
+          mkdir -p docs/unity
+          unzip tmp/WebGLBuild.zip -d docs/unity
+
+      - name: Commit extracted files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add docs/unity
+          git commit -m "Extract Unity WebGL build ${{ github.event.release.tag_name }}" || echo "No changes"
+          git push
