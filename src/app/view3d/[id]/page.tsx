@@ -83,7 +83,7 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
           ref={frameRef}
           id="unityFrame"
           // 将来のID連携用（いまはランダム遷移で誤魔化す）
-          src={`/view3d/WebGLBuild/index.html?unityObject=HotelAutoWarpReceiver`}
+          src={`https://ro-dina.github.io/hotel3d/unity/WebGLBuild/index.html`}
           className="w-full h-full"
           allowFullScreen
         />
