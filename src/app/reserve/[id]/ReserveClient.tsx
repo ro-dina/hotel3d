@@ -88,11 +88,11 @@ export default function ReserveClient({
   };
 
   return (
-    <main className="bg-gray-100 min-h-screen">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         <h1 className="text-2xl font-bold">予約情報の入力</h1>
 
-        <div className="bg-white border rounded-xl p-4 shadow flex gap-4">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow flex gap-4">
           <Image
             src={hotel.imageUrl}
             alt={hotel.name}
@@ -103,9 +103,9 @@ export default function ReserveClient({
           />
           <div className="flex-1">
             <div className="text-lg font-semibold">{hotel.name}</div>
-            <div className="text-sm text-gray-600 mt-1">{hotel.region}・{hotel.pref ?? ""}</div>
+            <div className="text-sm text-[var(--muted-foreground)] mt-1">{hotel.region}・{hotel.pref ?? ""}</div>
             <div className="mt-2">
-              <span className="text-sm text-gray-600">料金（税込）</span>
+              <span className="text-sm text-[var(--muted-foreground)]">料金（税込）</span>
               <div className="text-2xl font-bold">¥{hotel.price.toLocaleString()}</div>
             </div>
           </div>
@@ -113,7 +113,7 @@ export default function ReserveClient({
 
         <form
           onSubmit={(e) => { e.preventDefault(); if (canProceed) goCheckout(); }}
-          className="bg-white border rounded-xl p-4 shadow space-y-4"
+          className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow space-y-4"
         >
           <div className="grid sm:grid-cols-2 gap-4">
             <Labeled label="氏名">
@@ -133,11 +133,11 @@ export default function ReserveClient({
                 onChange={(e) => setForm({ ...form, guests: Number(e.target.value || 1) })} />
             </Labeled>
             <Labeled label="チェックイン">
-              <input type="date" className="mt-1 w-full rounded border-gray-300 text-gray-900" value={form.checkIn}
+              <input type="date" className="mt-1 w-full rounded border-gray-300 text-[var(--foreground)]" value={form.checkIn}
                 onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
             </Labeled>
             <Labeled label="チェックアウト">
-              <input type="date" className="mt-1 w-full rounded border-gray-300 text-gray-900" value={form.checkOut}
+              <input type="date" className="mt-1 w-full rounded border-gray-300 text-[var(--foreground)]" value={form.checkOut}
                 onChange={(e) => setForm({ ...form, checkOut: e.target.value })} min={form.checkIn || undefined} />
             </Labeled>
           </div>

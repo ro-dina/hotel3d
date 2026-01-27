@@ -42,6 +42,12 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
         { type: "setMobile", payload: isMobile ? 1 : 0 },
         "*"
       );
+      frameEl?.contentWindow?.postMessage({ type: "warpNow" }, "*");
+      // 将来のID連携用（いまはランダム遷移で誤魔化す）
+      // frameEl?.contentWindow?.postMessage(
+      //   { type: "setHotelId", payload: id },
+      //   "*"
+      // );
     };
 
     const onLoad = () => send();
@@ -58,7 +64,7 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, []);
+  }, [id]);
 
   // ヘッダや余白ぶんのオフセット（適宜調整）
   const HEADER_OFFSET = 120; // px
@@ -76,7 +82,8 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
         <iframe
           ref={frameRef}
           id="unityFrame"
-          src={`/view3d/WebGLBuild/index.html`}
+          // 将来のID連携用（いまはランダム遷移で誤魔化す）
+          src={`/view3d/WebGLBuild/index.html?unityObject=HotelAutoWarpReceiver`}
           className="w-full h-full"
           allowFullScreen
         />

@@ -282,7 +282,7 @@ export default function HomePage() {
   }, [hotels]);
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-white">
+    <div className="min-h-screen w-full bg-[var(--background)] text-[var(--foreground)]">
       <div
         ref={containerRef}
         className="h-screen w-full grid grid-cols-1 lg:grid-cols-1"
@@ -306,7 +306,7 @@ export default function HomePage() {
           <Suspense
             fallback={
               <div
-                className="h-full w-full bg-gradient-to-b from-slate-950 via-sky-900 to-slate-900"
+                className="h-full w-full bg-gradient-to-b from-slate-100 via-sky-100 to-slate-200 dark:from-slate-950 dark:via-sky-900 dark:to-slate-900"
                 aria-hidden="true"
               />
             }
@@ -340,14 +340,14 @@ export default function HomePage() {
           </Suspense>
         </div>
 
-        <div className="flex w-full flex-col overflow-y-auto bg-white/5 px-4 py-8 lg:px-8 lg:py-12">
+        <div className="flex w-full flex-col overflow-y-auto bg-[var(--surface-soft)] px-4 py-8 lg:px-8 lg:py-12">
           <div className="flex flex-1 flex-col gap-6">
-            <section className="pointer-events-auto rounded-3xl border border-white/30 bg-white/10 p-6 shadow-2xl backdrop-blur">
-              <div className="mt-6 flex flex-wrap gap-3 text-xs text-white/80">
+            <section className="pointer-events-auto rounded-3xl border border-[var(--border)] bg-[var(--surface-soft)] p-6 shadow-2xl backdrop-blur">
+              <div className="mt-6 flex flex-wrap gap-3 text-xs text-[var(--muted-foreground)]">
                 {(region || prefecture) && (
                   <button
                     type="button"
-                    className="rounded-full border border-indigo-400/80 bg-indigo-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200"
+                    className="rounded-full border border-indigo-300 bg-indigo-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700 dark:border-indigo-400/80 dark:bg-indigo-500/20 dark:text-indigo-200"
                     onClick={() => {
                       setPrefecture(null);
                       setRegion(null);
@@ -365,17 +365,17 @@ export default function HomePage() {
               </div>
             </section>
 
-            <section className="pointer-events-auto rounded-3xl border border-white/20 bg-white/10 p-6 shadow-[0_15px_45px_rgba(2,6,23,0.7)] backdrop-blur">
+            <section className="pointer-events-auto rounded-3xl border border-[var(--border)] bg-[var(--surface-soft)] p-6 shadow-[0_15px_45px_rgba(2,6,23,0.25)] dark:shadow-[0_15px_45px_rgba(2,6,23,0.7)] backdrop-blur">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-white/60">
+                  <p className="text-xs uppercase tracking-[0.4em] text-[var(--muted-foreground-strong)]">
                     {prefecture
                       ? `${prefecture}のホテル`
                       : region
                       ? `${region}のホテル`
                       : "全国の宿泊施設"}
                   </p>
-                  <h2 className="mt-1 text-2xl font-semibold text-white">
+                  <h2 className="mt-1 text-2xl font-semibold text-[var(--foreground)]">
                     {prefecture
                       ? `${prefecture}の宿泊施設一覧`
                       : region
@@ -386,7 +386,7 @@ export default function HomePage() {
                 {(region || prefecture) && (
                   <button
                     type="button"
-                    className="text-sm font-medium text-indigo-300 underline"
+                    className="text-sm font-medium text-indigo-600 underline dark:text-indigo-300"
                     onClick={() => {
                       setPrefecture(null);
                       setRegion(null);
@@ -403,7 +403,7 @@ export default function HomePage() {
 
               {/* 価格範囲フィルタ（下限・上限の2つのつまみ） */}
               <div className="mt-4">
-                <div className="flex items-center justify-between text-xs text-white/70">
+                <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
                   <div>価格下限: ¥{priceMin?.toLocaleString()}</div>
                   <div>価格上限: ¥{priceMax?.toLocaleString()}</div>
                 </div>
@@ -439,7 +439,7 @@ export default function HomePage() {
                       style={{ top: "12px" }}
                       className="absolute left-0 right-0 w-full appearance-none bg-transparent z-10"
                     />
-                    <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 bg-slate-700 rounded" />
+                    <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 bg-slate-200 dark:bg-slate-700 rounded" />
                     <div
                       className="absolute top-1/2 h-1 -translate-y-1/2 bg-indigo-500 rounded"
                       style={{
@@ -457,7 +457,7 @@ export default function HomePage() {
                       }}
                     />
                     <div
-                      className="absolute top-1/2 w-3 h-3 bg-white rounded-full shadow -translate-y-1/2"
+                      className="absolute top-1/2 w-3 h-3 bg-slate-900 dark:bg-white rounded-full shadow -translate-y-1/2"
                       style={{
                         left: `${
                           (((priceMin ?? minPrice) - minPrice) /
@@ -468,7 +468,7 @@ export default function HomePage() {
                       }}
                     />
                     <div
-                      className="absolute top-1/2 w-3 h-3 bg-white rounded-full shadow -translate-y-1/2"
+                      className="absolute top-1/2 w-3 h-3 bg-slate-900 dark:bg-white rounded-full shadow -translate-y-1/2"
                       style={{
                         left: `${
                           (((priceMax ?? maxPrice) - minPrice) /
@@ -483,14 +483,14 @@ export default function HomePage() {
               </div>
 
               {/* 朝食・宿泊スタイルの絞り込み */}
-              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-white/80">
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[var(--muted-foreground)]">
                 <button
                   type="button"
                   onClick={() => setOnlyBreakfast((prev) => !prev)}
                   className={`rounded-full border px-3 py-1 font-medium transition ${
                     onlyBreakfast
                       ? "border-amber-300 bg-amber-400/20 text-amber-50"
-                      : "border-white/30 bg-white/10 text-white/80 hover:border-amber-200 hover:text-amber-100"
+                      : "border-[var(--border)] bg-[var(--surface-soft)] text-[var(--muted-foreground)] hover:border-amber-200 hover:text-amber-700 dark:hover:text-amber-100"
                   }`}
                 >
                   朝食付きのみ
@@ -505,7 +505,7 @@ export default function HomePage() {
                   className={`rounded-full border px-3 py-1 font-medium transition ${
                     useMapBounds
                       ? "border-sky-300 bg-sky-400/20 text-sky-50"
-                      : "border-white/30 bg-white/10 text-white/80 hover:border-sky-200 hover:text-sky-100"
+                      : "border-[var(--border)] bg-[var(--surface-soft)] text-[var(--muted-foreground)] hover:border-sky-200 hover:text-sky-700 dark:hover:text-sky-100"
                   }`}
                 >
                   この範囲で検索
@@ -514,13 +514,13 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setUseMapBounds(false)}
-                    className="rounded-full border border-white/30 bg-white/10 px-3 py-1 font-medium text-white/80 transition hover:border-white/60 hover:text-white"
+                    className="rounded-full border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-1 font-medium text-[var(--muted-foreground)] transition hover:border-slate-300 hover:text-[var(--foreground)]"
                   >
                     範囲解除
                   </button>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-white/60">宿泊スタイル:</span>
+                  <span className="text-[var(--muted-foreground-strong)]">宿泊スタイル:</span>
                   {[
                     { value: "", label: "すべて" },
                     { value: "hotel", label: "ホテル" },
@@ -534,7 +534,7 @@ export default function HomePage() {
                       className={`rounded-full border px-3 py-1 text-[11px] font-medium transition ${
                         typeFilter === opt.value
                           ? "border-indigo-300 bg-indigo-500/30 text-indigo-50"
-                          : "border-white/30 bg-white/5 text-white/70 hover:border-indigo-200 hover:text-indigo-100"
+                          : "border-[var(--border)] bg-[var(--surface-soft)] text-[var(--muted-foreground)] hover:border-indigo-200 hover:text-indigo-700 dark:hover:text-indigo-100"
                       }`}
                     >
                       {opt.label}
@@ -553,7 +553,7 @@ export default function HomePage() {
                 {hotels.map((hotel) => (
                   <li
                     key={`${hotel.id}-${hotel.name}`}
-                    className="cursor-pointer overflow-hidden rounded-2xl border border-white/20 bg-slate-900/70 shadow-lg shadow-black/60 transition hover:shadow-white/30"
+                    className="cursor-pointer overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-lg shadow-black/10 dark:shadow-black/60 transition dark:hover:shadow-white/30"
                     onClick={(event) => {
                       const target = event.target as HTMLElement | null;
                       if (target?.closest("a")) return;
@@ -568,16 +568,16 @@ export default function HomePage() {
                       className="h-40 w-full object-cover"
                     />
                     <div className="p-4">
-                      <div className="text-sm font-semibold text-white">
+                      <div className="text-sm font-semibold text-[var(--foreground)]">
                         {hotel.name}
                       </div>
-                      <div className="mt-1 text-xs uppercase tracking-wide text-white/60">
+                      <div className="mt-1 text-xs uppercase tracking-wide text-[var(--muted-foreground-strong)]">
                         {hotel.region}・{hotel.pref ?? "所在地不明"}
                       </div>
-                      <div className="mt-2 text-2xl font-bold text-white">
+                      <div className="mt-2 text-2xl font-bold text-[var(--foreground)]">
                         ¥{hotel.price.toLocaleString()}
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-3 text-sm text-white/70">
+                      <div className="mt-3 flex flex-wrap gap-3 text-sm text-[var(--muted-foreground)]">
                         <a className="underline" href={`/hotel/${hotel.id}`}>
                           詳細
                         </a>

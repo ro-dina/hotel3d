@@ -14,12 +14,17 @@ export default async function HotelDetailPage(props: unknown) {
   const hotel: Hotel | undefined = HOTELS.find(h => String(h.id) === id);
 
   if (!hotel) {
-    return <main className="p-6">ホテルが見つかりませんでした。</main>;
+    return (
+      <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+        <div className="max-w-5xl mx-auto p-6">ホテルが見つかりませんでした。</div>
+      </main>
+    );
   }
 
   return (
-    <main className="grid lg:grid-cols-[2fr_3fr] gap-6 p-2">
-      <div className="border rounded-lg overflow-hidden">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <div className="max-w-6xl mx-auto grid lg:grid-cols-[2fr_3fr] gap-6 p-6">
+        <div className="border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--surface)]">
         <Image
           src={hotel.imageUrl}
           alt={hotel.name}
@@ -28,10 +33,10 @@ export default async function HotelDetailPage(props: unknown) {
           className="w-full h-[320px] object-cover"
           unoptimized
         />
-      </div>
-      <div className="bg-white border rounded-lg p-4 shadow">
+        </div>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 shadow">
         <h1 className="text-2xl font-bold">{hotel.name}</h1>
-        <p className="text-gray-600">{hotel.region}・{hotel.pref ?? ""}</p>
+        <p className="text-[var(--muted-foreground)]">{hotel.region}・{hotel.pref ?? ""}</p>
         <div className="mt-3 text-xl font-bold">¥{hotel.price.toLocaleString()}</div>
         <div className="mt-3 whitespace-pre-wrap">{hotel.description}</div>
         <ul className="mt-4 text-sm grid grid-cols-2 gap-2">
@@ -41,8 +46,9 @@ export default async function HotelDetailPage(props: unknown) {
         </ul>
         <div className="mt-4 flex gap-3">
           <a className="px-4 py-2 bg-blue-600 text-white rounded" href={`/reserve/${hotel.id}`}>予約へ</a>
-          <a className="px-4 py-2 bg-gray-100 border rounded" href={`/view3d/${hotel.id}`}>3Dで見る</a>
+          <a className="px-4 py-2 bg-[var(--surface-alt)] border border-[var(--border)] rounded" href={`/view3d/${hotel.id}`}>3Dで見る</a>
         </div>
+      </div>
       </div>
     </main>
   );

@@ -85,15 +85,15 @@ export default function HomePage() {
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <main className="p-4 bg-gray-100 min-h-screen">
+      <main className="p-4 min-h-screen bg-[var(--background)] text-[var(--foreground)]">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-2xl font-bold mb-2 text-gray-900">
+          <h1 className="text-2xl font-bold mb-2 text-[var(--foreground)]">
             {hasFilters ? "検索結果" : "ホテル一覧"}
           </h1>
 
           {/* フィルタの概要 */}
           {hasFilters && (
-            <p className="mb-4 text-sm text-gray-700">
+            <p className="mb-4 text-sm text-[var(--muted-foreground)]">
               {regionParam && <>地域: {regionParam} </>}
               {checkInParam && <>チェックイン: {checkInParam} </>}
               {checkOutParam && <>チェックアウト: {checkOutParam} </>}
@@ -189,7 +189,7 @@ export default function HomePage() {
             {/* ===== 右：結果 ===== */}
             <section className="md:col-span-9">
               {filteredHotels.length === 0 ? (
-                <p className="text-gray-700">該当するホテルがありません。</p>
+                <p className="text-[var(--muted-foreground)]">該当するホテルがありません。</p>
               ) : (
                 <ul className="space-y-4">
                   {filteredHotels.map((hotel) => (
