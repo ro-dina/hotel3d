@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-  const base = process.env.LLM_BASE_URL; // 例: https://xxxxx.trycloudflare.com
-  const token = process.env.LLM_TOKEN;   // 例: 長いランダム文字列
+  const base = process.env.LLM_BASE_URL; // https://xxxxx.trycloudflare.com
+  const token = process.env.LLM_TOKEN;   // 長いランダム文字列
 
   if (!base || !token) {
     return NextResponse.json(
@@ -13,14 +13,15 @@ export async function POST(req: Request) {
 
   const body = await req.text();
 
-  const r = await fetch(`${base}/api/chat`, {
+  // ★ここが重要：PC側の llm-gateway は /chat
+  const r = await fetch(`${base}/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body,
-    // タイムアウト気味のときは Vercel の実行時間に注意（短期デモならOK）
+    cache: "no-store",
   });
 
   const text = await r.text();
