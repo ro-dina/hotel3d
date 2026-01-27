@@ -1,43 +1,52 @@
-name: Extract Unity WebGL Build
+name: Deploy Unity WebGL to GitHub Pages
 
 on:
   release:
     types: [published]
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  extract:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: main
 
       - name: Download Unity zip
+        shell: bash
         run: |
+          set -euxo pipefail
           mkdir -p tmp
           curl -L -o tmp/WebGLBuild.zip \
             https://github.com/ro-dina/hotel3d/releases/download/${{ github.event.release.tag_name }}/WebGLBuild.zip
+          ls -lh tmp/WebGLBuild.zip
 
-      - name: Unzip Unity build
+      - name: Prepare site content
+        shell: bash
         run: |
-          rm -rf docs/unity
-          mkdir -p docs/unity
-          unzip -o tmp/WebGLBuild.zip -d docs/unity
+          set -euxo pipefail
+          rm -rf site
+          mkdir -p site/unity
+          unzip -o tmp/WebGLBuild.zip -d site/unity
+          rm -rf site/unity/__MACOSX || true
+          ls -lah site/unity | head -50
 
-      - name: Ensure on main branch
-        run: |
-          git checkout -B main
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
-      - name: Commit extracted files
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add docs/unity
-          git commit -m "Extract Unity WebGL build ${{ github.event.release.tag_name }}" || echo "No changes"
-          git push origin HEAD:main
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
