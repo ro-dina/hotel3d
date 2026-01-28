@@ -333,11 +333,11 @@ export default function AboutPage() {
             
             <div style={{ position: "relative", marginBottom: 50, mixBlendMode: "hard-light" }}>
                 <h1 style={{ fontSize: "clamp(60px, 12vw, 160px)", fontWeight: 900, lineHeight: 0.85, letterSpacing: "-0.04em", margin: 0 }}>
-                    <span style={{ display: "block", color: "#111" }}>METAVANIA</span>
+                    <span style={{ display: "block", color: "#111" }}>HOTEL3D</span>
                     <span style={{ display: "block", color: "#FF0055", transform: "translateX(40px)" }}>PROTOCOL</span>
                 </h1>
                 <div style={{ position: "absolute", top: -20, left: -20, background: "#0055FF", color: "#fff", padding: "5px 15px", transform: "rotate(-5deg)", fontWeight: "bold" }}>
-                    V.2.0.4 UPDATED
+                    V.13.2.4 UPDATED
                 </div>
             </div>
 
@@ -377,7 +377,7 @@ export default function AboutPage() {
                 <div className="order-1 lg:order-2 lg:col-span-7 relative lg:pl-10">
                     <p style={{ fontSize: "clamp(18px, 2.5vw, 32px)", fontWeight: 800, lineHeight: 1.4, background: "#fff", display: "inline", boxShadow: "10px 0 0 #fff, -10px 0 0 #fff", boxDecorationBreak: "clone" }}>
                         写真の向こう側にある「空気感」まで。<br/>
-                        メタバニアは宿泊施設の空間を<br/>
+                        Hotel3Dは宿泊施設の空間を<br/>
                         <span style={{ color: "#0055FF" }}>「読む」</span>情報から<br/>
                         <span style={{ color: "#FF0055" }}>「歩く」</span>体験へと書き換えます。
                     </p>
@@ -456,14 +456,13 @@ export default function AboutPage() {
          </div>
       </section>
 
-      {/* ------------------------------------------------------------------
-          SECTION 4: MAGAZINE LAYOUT
+{/* ------------------------------------------------------------------
+          SECTION 4: MAGAZINE LAYOUT (EXPANDED)
          ------------------------------------------------------------------ */}
       <section style={{ padding: "100px 5%", background: "#fff", position: "relative" }}>
           <div style={{ maxWidth: 1400, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))", gap: 60 }}>
-            <ScrollText text="ARCHITECTURE" y="10%" speed={0.5} direction={1} />
-  <ScrollText text="DIGITAL TWIN" y="40%" speed={0.8} direction={-1} color="rgba(255, 0, 85, 0.05)" />
               
+              {/* BLOCK 1: STRATEGY (既存) */}
               <div className="mag-col">
                   <h3 className="mag-title" style={{ background: "#FF0055" }}>STRATEGY</h3>
                   <p className="mag-text">
@@ -479,10 +478,10 @@ export default function AboutPage() {
                   </div>
               </div>
 
+              {/* BLOCK 2: EXPERIENCE (既存) */}
               <div className="mag-col" style={{ marginTop: 80 }}>
                   <h3 className="mag-title" style={{ background: "#0055FF" }}>EXPERIENCE</h3>
                   <div style={{ position: "relative", height: 250, marginBottom: 20, overflow: "hidden", border: "3px solid #111" }}>
-                      {/* ランダム画像 [7] */}
                       <Image src={randomizedImages[7]} alt="" fill style={{ objectFit: "cover" }} />
                       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.8))" }} />
                       <div style={{ position: "absolute", bottom: 20, left: 20, color: "#fff", fontSize: 24, fontWeight: 900 }}>REAL SCALE</div>
@@ -494,6 +493,7 @@ export default function AboutPage() {
                   </p>
               </div>
 
+              {/* BLOCK 3: FUTURE (既存) */}
               <div className="mag-col">
                    <h3 className="mag-title" style={{ background: "#00AA00" }}>FUTURE</h3>
                    <p className="mag-text">
@@ -507,14 +507,88 @@ export default function AboutPage() {
                            </li>
                        ))}
                    </ul>
-                   {/* ランダム画像 [8] スタンプ風 */}
-                   <div style={{ marginTop: 30, position: "relative", width: 100, height: 100, border: "2px solid #111", transform: "rotate(10deg)", marginLeft: "auto" }}>
-                        <Image src={randomizedImages[8]} alt="" fill style={{ objectFit: "cover" }} />
-                   </div>
               </div>
+
+              {/* BLOCK 4: VELOCITY (新規 - 開発速度) */}
+              <div className="mag-col" style={{ marginTop: 40 }}>
+                  <h3 className="mag-title" style={{ background: "#FFaa00" }}>VELOCITY</h3>
+                  <p className="mag-text">
+                      <strong>空間のデジタル化における最大の障壁、</strong>それはスキャンにかかる時間とコストでした。私たちは一般的なスマートフォンのLiDARセンサーとShade3Dを組み合わせることで、このプロセスを劇的に短縮しました。
+                      <br/><br/>
+                      実証実験では、8畳の客室をわずか5分未満でモデル化。専門機材を搬入することなく、たった一名で完結するこのワークフローは、中小規模の宿泊施設にとっての「3D導入革命」となります。
+                  </p>
+                  <div style={{ marginTop: 20, height: 10, background: "repeating-linear-gradient(45deg, #FFaa00, #FFaa00 10px, #fff 10px, #fff 20px)", border: "2px solid #111" }} />
+              </div>
+
+              {/* BLOCK 5: INTEGRATION (新規 - システム連携) */}
+              <div className="mag-col">
+                  <h3 className="mag-title" style={{ background: "#9900FF" }}>INTEGRATION</h3>
+                  <div style={{ position: "relative", height: 200, marginBottom: 20, overflow: "hidden", border: "3px solid #111", transform: "rotate(2deg)" }}>
+                      <Image src={randomizedImages[4]} alt="" fill style={{ objectFit: "cover", filter: "grayscale(100%)" }} />
+                      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", background: "#fff", padding: "10px 20px", fontWeight: 900, border: "2px solid #111" }}>API CONNECT</div>
+                  </div>
+                  <p className="mag-text">
+                      <strong>「見るだけ」で終わらせない。</strong>既存のVRツアーの弱点は、予約システムとの分断にありました。Metavaniaは、外部API連携を前提に設計されており、PMS（ホテル管理システム）の在庫状況をリアルタイムに反映します。
+                      <br/><br/>
+                      <span className="highlight yellow">気に入った部屋があれば、その場ですぐに予約を確定。マイル連携やポイント利用も、3D空間内のインターフェースで完結させます。</span>
+                  </p>
+              </div>
+
+              {/* BLOCK 6: TARGETING (新規 - ターゲット層) */}
+              <div className="mag-col" style={{ marginTop: 60 }}>
+                  <h3 className="mag-title" style={{ background: "#FF0055" }}>TARGETING</h3>
+                  <p className="mag-text">
+                      サービスの主役となるのは、デジタルネイティブである10代から20代の学生や新社会人です。彼らが憧れる「少し贅沢な旅」を叶えるため、まずは一泊1.5万〜2.5万円前後のリゾートホテルをターゲットに提携を進めます。
+                  </p>
+                  <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                      <div style={{ flex: 1, padding: 15, background: "#111", color: "#fff", textAlign: "center", fontWeight: 700 }}>GEN Z</div>
+                      <div style={{ flex: 1, padding: 15, background: "#eee", color: "#111", textAlign: "center", fontWeight: 700 }}>DIGITAL</div>
+                  </div>
+                  <p className="mag-text" style={{ marginTop: 20 }}>
+                      スマホで3Dゲームを遊ぶ感覚で、旅先を選ぶ。この新しい行動様式を定着させることが、私たちのマーケティングの核心です。
+                  </p>
+              </div>
+
+              {/* BLOCK 7: HONESTY (新規 - 情報の透明性) */}
+              <div className="mag-col">
+                  <h3 className="mag-title" style={{ background: "#000", color: "#fff" }}>HONESTY</h3>
+                  <p className="mag-text">
+                      <strong>「行ってみたら期待はずれだった」</strong>という経験は、顧客のロイヤリティを著しく損ないます。私たちは、あえて「狭さ」や「死角」も含めて包み隠さず3D化します。
+                      <br/><br/>
+                      ネガティブな要素も事前に把握できていれば、それは「納得」に変わります。誠実な情報開示こそが、クレームを未然に防ぎ、結果として高い顧客満足度とリピート率を生み出すのです。
+                  </p>
+              </div>
+
+              {/* BLOCK 8: ASSET (新規 - 資産価値) */}
+              <div className="mag-col" style={{ marginTop: 30 }}>
+                  <h3 className="mag-title" style={{ background: "#00AA00" }}>ASSET</h3>
+                  <div style={{ position: "relative", height: 180, marginBottom: 20, overflow: "hidden", border: "3px solid #111" }}>
+                      <Image src={randomizedImages[5]} alt="" fill style={{ objectFit: "cover" }} />
+                      <div style={{ position: "absolute", bottom: 0, right: 0, background: "#00AA00", color: "#fff", padding: "5px 15px", fontWeight: 700 }}>DATA RE-USE</div>
+                  </div>
+                  <p className="mag-text">
+                      生成した3Dモデルは、予約サイトのためだけの使い捨てではありません。F8VPSへの実装はもちろん、改修工事のシミュレーション、家具配置の検討、スタッフのオペレーション研修など、多角的に活用可能です。
+                      <br/><br/>
+                      一度のスキャンが、経営判断を支える永続的な「デジタル資産」へと変わります。
+                  </p>
+              </div>
+
+              {/* BLOCK 9: GLOBAL (新規 - 世界展開) */}
+              <div className="mag-col" style={{ marginTop: 90 }}>
+                  <h3 className="mag-title" style={{ background: "#0055FF" }}>GLOBAL</h3>
+                  <p className="mag-text">
+                      <strong>視覚情報に「言語の壁」はありません。</strong>3D空間での体験は、翻訳を介さずに世界中の旅行者に魅力を伝えます。さらに、国ごとに異なる平均身長を考慮した「視点変更機能」を搭載。
+                  </p>
+                  <div style={{ padding: 15, border: "2px dashed #0055FF", marginTop: 20, background: "#eef" }}>
+                      <strong style={{ color: "#0055FF" }}>Universal View</strong>
+                      <p style={{ margin: "5px 0 0", fontSize: 13 }}>
+                          150cmの視点、190cmの視点。ユーザーの身体的属性に寄り添った最適な宿泊体験を、世界規模で提供します。
+                      </p>
+                  </div>
+              </div>
+
           </div>
-      </section>
-      
+      </section>      
       {/* ------------------------------------------------------------------
           ★追加: SECTION 4.5: CHAOTIC TEXT RAIN (機能的テキストの嵐)
          ------------------------------------------------------------------ */}
