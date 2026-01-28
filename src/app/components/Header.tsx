@@ -42,35 +42,46 @@ export default function Header() {
   };
 
   return (
-    // h-16で高さを固定し、圧迫を防ぐ
+    // h-16で高さを固定
     <header className="sticky top-0 z-50 h-16 border-b border-[var(--border)] bg-[var(--header)] backdrop-blur flex items-center">
       <div className="w-full max-w-6xl mx-auto px-4 flex items-center justify-between">
         
         {/* 左側：ロゴとナビゲーション */}
-        <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
-          <Link href="/" className="font-semibold text-lg whitespace-nowrap shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 overflow-hidden shrink-0">
+          {/* ロゴ: スマホでは非表示 (hidden), PCで表示 (sm:block) */}
+          <Link href="/" className="font-semibold text-lg whitespace-nowrap shrink-0 hidden sm:block">
             Hotel3D
           </Link>
+          {/* ナビ: 常時表示 */}
           <nav className="text-sm text-[var(--muted-foreground)] flex gap-3 whitespace-nowrap">
             <Link href="/">ホーム</Link>
-            <Link href="/about">このサイトについて</Link>
+            <Link href="/about">About</Link>
           </nav>
         </div>
 
-        {/* 中央：注釈テキスト（スマホでは隠す hidden、中画面以上で表示 md:block） */}
-        <div className="hidden md:block ml-6 text-xs text-[var(--muted-foreground)] max-w-sm truncate">
-          <p>
-            全ての値や情報は完全に架空のものであり、現存の何かと一切関係無い
-          </p>
+        {/* 中央エリア：注釈テキスト ＋ GitHubリンク */}
+        {/* flexで横並びにする。親要素で余白を調整 */}
+        <div className="flex-1 flex items-center justify-center gap-4 mx-2 min-w-0">
+          
+          {/* 1. 注釈テキスト (div) */}
+          <div className="text-[10px] sm:text-xs text-[var(--muted-foreground)] truncate text-center">
+            {/* スマホ用テキスト */}
+            <span className="block sm:hidden">※全て架空です</span>
+            {/* PC用テキスト */}
+            <span className="hidden sm:block">全てのホテルや値、情報は完全に架空のものであり、現存する何かと一切の関係がありません</span>
+          </div>
+
+          {/* 2. GitHubリンク (div) - PCのみ表示 */}
+          <div className="hidden sm:block text-[10px] sm:text-xs text-[var(--muted-foreground)] whitespace-nowrap">
+            <a href="https://github.com/ro-dina/hotel3d" target="_blank" rel="noopener noreferrer" className="hover:underline">
+              GitHub開発リポジトリ
+            </a>
+          </div>
+
         </div>
 
-        <div className="hidden md:block ml-6 text-xs text-[var(--muted-foreground)] max-w-sm truncate">
-          <p>
-            <a href="https://github.com/ro-dina/hotel3d" target="_blank" rel="noopener noreferrer">GitHub開発リポジトリ</a>
-          </p>
-        </div>
         {/* 右側：テーマ切り替え */}
-        <div className="ml-auto flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           {mounted ? (
             <>
               <button
@@ -87,7 +98,7 @@ export default function Header() {
                   }`}
                 />
               </button>
-              {/* テキストラベルはスマホでは隠す (hidden sm:block) */}
+              {/* テキストラベルはスマホでは隠す */}
               <span className="hidden sm:block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted-foreground-strong)]">
                 {theme === "dark" ? "Dark" : "Light"}
               </span>

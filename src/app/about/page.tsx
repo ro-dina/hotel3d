@@ -341,21 +341,25 @@ export default function AboutPage() {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 20, alignItems: "start" }}>
+            {/* Grid Layout: スマホでは縦並び(grid-cols-1)、PCでは12分割(lg:grid-cols-12) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-5 items-start">
                 
-                {/* 画像スタック（ランダム） */}
-                <div style={{ gridColumn: "span 5", position: "relative", height: 500 }}>
-                    {/* 1枚目: ランダムリストの0番目 */}
+                {/* 画像スタック 
+                   スマホでは下に表示 (order-2)
+                   PCでは左側5カラム (lg:col-span-5 lg:order-1)
+                */}
+                <div className="order-2 lg:order-1 lg:col-span-5 relative h-[400px] lg:h-[500px]">
+                    {/* 1枚目 */}
                     <div className="sticker-img" style={{ transform: `rotate(-3deg) translate(${mouse.x * 10}px, ${mouse.y * 10}px)` }}>
                         <Image src={randomizedImages[0]} alt="Sticker 1" fill style={{ objectFit: "cover" }} />
                         <div className="tape" />
                     </div>
-                    {/* 2枚目: ランダムリストの1番目 */}
+                    {/* 2枚目 */}
                     <div className="sticker-img" style={{ top: 100, left: 50, transform: `rotate(5deg) translate(${mouse.x * -20}px, ${mouse.y * -20}px)`, zIndex: 2 }}>
                         <Image src={randomizedImages[1]} alt="Sticker 2" fill style={{ objectFit: "cover" }} />
                         <div className="tape" style={{ transform: "rotate(90deg)", left: "40%", top: -20 }} />
                     </div>
-                    {/* 3枚目: ランダムリストの2番目（小さく散らす） */}
+                    {/* 3枚目 */}
                      <div className="sticker-img" style={{ width: 150, height: 150, top: -50, right: -20, transform: `rotate(15deg) translate(${mouse.x * 15}px, ${mouse.y * 15}px)`, zIndex: 3 }}>
                         <Image src={randomizedImages[2]} alt="Sticker 3" fill style={{ objectFit: "cover" }} />
                         <div className="tape" />
@@ -366,7 +370,11 @@ export default function AboutPage() {
                     </div>
                 </div>
 
-                <div style={{ gridColumn: "span 7", position: "relative", paddingLeft: 40 }}>
+                {/* テキストコラージュ 
+                   スマホでは上に表示 (order-1)
+                   PCでは右側7カラム (lg:col-span-7 lg:order-2)
+                */}
+                <div className="order-1 lg:order-2 lg:col-span-7 relative lg:pl-10">
                     <p style={{ fontSize: "clamp(18px, 2.5vw, 32px)", fontWeight: 800, lineHeight: 1.4, background: "#fff", display: "inline", boxShadow: "10px 0 0 #fff, -10px 0 0 #fff", boxDecorationBreak: "clone" }}>
                         写真の向こう側にある「空気感」まで。<br/>
                         メタバニアは宿泊施設の空間を<br/>
