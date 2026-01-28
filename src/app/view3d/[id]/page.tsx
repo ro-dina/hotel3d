@@ -74,7 +74,7 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
 
   return (
     <main className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">3Dビュー（ホテルID: {id}）</h1>
+      <h1 className="text-2xl font-bold">操作方法: WASDで移動、Eで車椅子に乗る、Fでワープポイントに移動、Hでホテルメニュー</h1>
       <div
         className="w-full border rounded overflow-hidden min-h-[360px]"
         style={containerStyle}
