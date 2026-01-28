@@ -23,7 +23,7 @@ const SYSTEM_HELP = `
 あなた：
 以下の手順でご覧いただけます。
 1. ホテル一覧から気になるホテルを選択してください。
-2.「3Dビューで見る」ボタンをクリックすると、Unity WebGLが起動します。`;
+2.「3Dビューで見る」ボタンをクリックすると、起動します。`;
 
 // 送信する messages（system はサーバ側で足してもOK）
 export default function ChatWidget() {
