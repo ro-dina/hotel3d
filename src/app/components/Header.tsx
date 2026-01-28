@@ -60,10 +60,15 @@ export default function Header() {
         {/* 中央：注釈テキスト（スマホでは隠す hidden、中画面以上で表示 md:block） */}
         <div className="hidden md:block ml-6 text-xs text-[var(--muted-foreground)] max-w-sm truncate">
           <p>
-            現状の値や情報は完全に架空のものであり、現存の何かと一切関係無し
+            全ての値や情報は完全に架空のものであり、現存の何かと一切関係無い
           </p>
         </div>
 
+        <div className="hidden md:block ml-6 text-xs text-[var(--muted-foreground)] max-w-sm truncate">
+          <p>
+            <a href="https://github.com/ro-dina/hotel3d" target="_blank" rel="noopener noreferrer">GitHub開発リポジトリ</a>
+          </p>
+        </div>
         {/* 右側：テーマ切り替え */}
         <div className="ml-auto flex items-center gap-3 shrink-0">
           {mounted ? (
