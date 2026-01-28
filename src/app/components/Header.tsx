@@ -55,7 +55,7 @@ export default function Header() {
           {/* ナビ: 常時表示 */}
           <nav className="text-sm text-[var(--muted-foreground)] flex gap-3 whitespace-nowrap">
             <Link href="/">ホーム</Link>
-            <Link href="/about">About</Link>
+            <Link href="/about">このサイトについて</Link>
           </nav>
         </div>
 
