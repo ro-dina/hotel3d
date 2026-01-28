@@ -42,14 +42,30 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--header)] backdrop-blur">
-      <div className="max-w-6xl mx-auto p-4 flex items-center gap-4">
-        <Link href="/" className="font-semibold text-lg">Hotel3D</Link>
-        <nav className="text-sm text-[var(--muted-foreground)] flex gap-3">
-          <Link href="/">ホーム</Link>
-          <Link href="/about">このサイトについて</Link>
-        </nav>
-        <div className="ml-auto flex items-center gap-3">
+    // h-16で高さを固定し、圧迫を防ぐ
+    <header className="sticky top-0 z-50 h-16 border-b border-[var(--border)] bg-[var(--header)] backdrop-blur flex items-center">
+      <div className="w-full max-w-6xl mx-auto px-4 flex items-center justify-between">
+        
+        {/* 左側：ロゴとナビゲーション */}
+        <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
+          <Link href="/" className="font-semibold text-lg whitespace-nowrap shrink-0">
+            Hotel3D
+          </Link>
+          <nav className="text-sm text-[var(--muted-foreground)] flex gap-3 whitespace-nowrap">
+            <Link href="/">ホーム</Link>
+            <Link href="/about">このサイトについて</Link>
+          </nav>
+        </div>
+
+        {/* 中央：注釈テキスト（スマホでは隠す hidden、中画面以上で表示 md:block） */}
+        <div className="hidden md:block ml-6 text-xs text-[var(--muted-foreground)] max-w-sm truncate">
+          <p>
+            現状の値や情報は完全に架空のものであり、現存の何かと一切関係無し
+          </p>
+        </div>
+
+        {/* 右側：テーマ切り替え */}
+        <div className="ml-auto flex items-center gap-3 shrink-0">
           {mounted ? (
             <>
               <button
@@ -66,7 +82,8 @@ export default function Header() {
                   }`}
                 />
               </button>
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted-foreground-strong)]">
+              {/* テキストラベルはスマホでは隠す (hidden sm:block) */}
+              <span className="hidden sm:block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted-foreground-strong)]">
                 {theme === "dark" ? "Dark" : "Light"}
               </span>
             </>
@@ -77,15 +94,6 @@ export default function Header() {
             />
           )}
         </div>
-        {/* <form onSubmit={onSubmit} className="ml-auto flex items-center gap-2">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="ホテル名/地域で検索"
-            className="border rounded px-3 py-1"
-          />
-          <button className="px-3 py-1 bg-blue-600 text-white rounded">検索</button>
-        </form> */}
       </div>
     </header>
   );
