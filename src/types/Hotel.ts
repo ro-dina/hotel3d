@@ -23,6 +23,16 @@ export type ReservationDraft = {
   name: string;
   email: string;
   phone: string;
+  postalCode: string;
+  country: string;
+  stateCity: string;
+  addressLine1: string;
+  addressLine2: string;
+  cardHolder: string;
+  cardNumber: string;
+  cardExpMonth: string;
+  cardExpYear: string;
+  cardCvc: string;
   checkIn: string;   // ISO yyyy-mm-dd
   checkOut: string;  // ISO yyyy-mm-dd
   guests: number;

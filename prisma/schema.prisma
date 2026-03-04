@@ -29,6 +29,19 @@ model Reservation {
   hotelId   Int
   name      String
   email     String
+  phone     String?
+  guests    Int      @default(1)
+  checkIn   DateTime?
+  checkOut  DateTime?
+  nights    Int      @default(0)
+  total     Float    @default(0)
+  postalCode String?
+  country    String?
+  stateCity  String?
+  addressLine1 String?
+  addressLine2 String?
+  cardHolder String?
+  cardLast4  String?
   createdAt DateTime @default(now())
 }
 
@@ -39,11 +52,19 @@ model User {
   passwordHash String
   bookingEmail String?
   phone        String?
-  address      String?
+  postalCode   String?
+  country      String?
+  stateCity    String?
+  addressLine1 String?
+  addressLine2 String?
   heightCm     Int       @default(170)
   bodyWidthPercent Int   @default(100)
   cardEncrypted String?
   cardLast4    String?
+  cardHolder   String?
+  cardExpMonth Int?
+  cardExpYear  Int?
+  cardCvcEncrypted String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   sessions     Session[]

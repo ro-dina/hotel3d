@@ -14,10 +14,17 @@ export async function GET() {
       email: user.email,
       bookingEmail: user.bookingEmail,
       phone: user.phone,
-      address: user.address,
+      postalCode: user.postalCode,
+      country: user.country,
+      stateCity: user.stateCity,
+      addressLine1: user.addressLine1,
+      addressLine2: user.addressLine2,
       heightCm: user.heightCm,
       bodyWidthPercent: user.bodyWidthPercent,
       cardLast4: user.cardLast4,
+      cardHolder: user.cardHolder,
+      cardExpMonth: user.cardExpMonth,
+      cardExpYear: user.cardExpYear,
     },
   });
 }
