@@ -169,6 +169,12 @@ const keywordMatchesHotel = (hotel: Hotel, query: string): boolean => {
       hotel.pref ?? "",
       hotel.region ?? "",
       hotel.type ?? "",
+      hotel.city ?? "",
+      hotel.admin1 ?? "",
+      hotel.district ?? "",
+      hotel.country ?? "",
+      hotel.countryCode ?? "",
+      ...(hotel.searchAliases ?? []),
     ].join(" "),
   );
   return haystack.includes(normalizedQuery);
@@ -531,11 +537,20 @@ export default function HomePage() {
 
   // ホテルデータ処理
   const { minPrice, maxPrice } = useMemo(() => {
-    const prices = hotelsData
-      .map((h) => Number(h.price))
-      .filter((p) => !Number.isNaN(p));
-    const min = prices.length ? Math.min(...prices) : 0;
-    const max = prices.length ? Math.max(...prices) : 0;
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+
+    for (const hotel of hotelsData) {
+      const price = Number(hotel.price);
+      if (Number.isNaN(price)) continue;
+      if (price < min) min = price;
+      if (price > max) max = price;
+    }
+
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      return { minPrice: 0, maxPrice: 0 };
+    }
+
     return { minPrice: min, maxPrice: max };
   }, [hotelsData]);
 
@@ -697,9 +712,29 @@ export default function HomePage() {
   );
 
   useEffect(() => {
-    if (priceMin === null) setPriceMin(minPrice);
-    if (priceMax === null) setPriceMax(maxPrice);
-  }, [minPrice, maxPrice, priceMin, priceMax]);
+    if (!hotelsData.length) return;
+
+    const shouldInitializeRange =
+      priceMin === null ||
+      priceMax === null ||
+      (priceMin === 0 && priceMax === 0 && maxPrice > 0);
+
+    if (shouldInitializeRange) {
+      setPriceMin(minPrice);
+      setPriceMax(maxPrice);
+      return;
+    }
+
+    const clampedMin = clampNumber(priceMin, minPrice, maxPrice);
+    const clampedMax = clampNumber(priceMax, minPrice, maxPrice);
+    const nextMin = Math.min(clampedMin, clampedMax);
+    const nextMax = Math.max(clampedMin, clampedMax);
+
+    if (nextMin !== priceMin || nextMax !== priceMax) {
+      setPriceMin(nextMin);
+      setPriceMax(nextMax);
+    }
+  }, [hotelsData, minPrice, maxPrice, priceMin, priceMax]);
 
   const clearAllFilters = useCallback(() => {
     setPrefecture(null);
@@ -749,6 +784,7 @@ export default function HomePage() {
         setUseMapBounds(false);
         setPrefecture(null);
         setRegion(null);
+        setCountryFilter("");
       }
 
       if (!trimmed) {
@@ -1104,13 +1140,30 @@ export default function HomePage() {
     searchQuery,
   ]);
 
+  const displayHotels = useMemo(() => {
+    if (hotels.length > 0) return hotels;
+    if (mapBounds) {
+      const inViewport = hotelsData.filter(
+        (hotel) =>
+          hotel.lat <= mapBounds.north &&
+          hotel.lat >= mapBounds.south &&
+          hotel.lng <= mapBounds.east &&
+          hotel.lng >= mapBounds.west,
+      );
+      if (inViewport.length > 0) return inViewport;
+    }
+    return hotelsData;
+  }, [hotels, hotelsData, mapBounds]);
+
   const renderedHotels = useMemo(
-    () => hotels.slice(0, visibleHotelCount),
-    [hotels, visibleHotelCount],
+    () => displayHotels.slice(0, visibleHotelCount),
+    [displayHotels, visibleHotelCount],
   );
 
   const markers = useMemo(() => {
-    const maxMapMarkers = markerCapForZoom(mapZoom);
+    const baseCap = markerCapForZoom(mapZoom);
+    const maxMapMarkers =
+      searchMode !== "none" ? Math.max(baseCap, 2000) : baseCap;
 
     const isInBounds = (hotel: Hotel) => {
       if (!mapBounds) return true;
@@ -1122,8 +1175,28 @@ export default function HomePage() {
       );
     };
 
-    const inViewport = hotels.filter(isInBounds);
-    const source = inViewport.length > 0 ? inViewport : hotels;
+    const inViewportFiltered = hotels.filter(isInBounds);
+    const inViewportAll = hotelsData.filter(isInBounds);
+    let source =
+      inViewportFiltered.length > 0
+        ? inViewportFiltered
+        : inViewportAll.length > 0
+          ? inViewportAll
+          : hotels.length > 0
+            ? hotels
+            : hotelsData;
+
+    if (searchMode !== "none" && focusLocation) {
+      const distance2 = (hotel: Hotel) => {
+        const dLat = hotel.lat - focusLocation.lat;
+        const dLng = hotel.lng - focusLocation.lng;
+        return dLat * dLat + dLng * dLng;
+      };
+      source = [...source].sort(
+        (left, right) => distance2(left) - distance2(right),
+      );
+    }
+
     if (!source.length) return [];
 
     if (source.length <= maxMapMarkers) {
@@ -1154,7 +1227,7 @@ export default function HomePage() {
       price: hotel.price,
       href: `/hotel/${hotel.id}`,
     }));
-  }, [hotels, mapBounds, mapZoom]);
+  }, [hotels, hotelsData, mapBounds, mapZoom, searchMode, focusLocation]);
 
   const handleHotelFocus = useCallback((hotel: Hotel) => {
     setFocusedHotelId(hotel.id);
@@ -1220,7 +1293,7 @@ export default function HomePage() {
               markers={markers}
               selectedMarkerId={focusedHotelId}
               focusLocation={focusLocation}
-              showMarkersAtZoom={8.5}
+              showMarkersAtZoom={5.5}
               onViewportChange={(bounds) => setMapBounds(bounds)}
               onZoomChange={(zoom) => setMapZoom(zoom)}
               maxZoom={20}
@@ -1539,7 +1612,7 @@ export default function HomePage() {
                   </li>
                 ))}
               </ul>
-              {hotels.length > renderedHotels.length && (
+              {displayHotels.length > renderedHotels.length && (
                 <div className="mt-3 flex justify-center">
                   <button
                     type="button"
@@ -1548,7 +1621,7 @@ export default function HomePage() {
                     }
                     className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--foreground)] transition hover:border-indigo-300"
                   >
-                    さらに表示 ({renderedHotels.length}/{hotels.length})
+                    さらに表示 ({renderedHotels.length}/{displayHotels.length})
                   </button>
                 </div>
               )}

@@ -1,6 +1,10 @@
 // src/data/mockHotels.ts
 import type { Hotel } from "@/types/Hotel";
 import * as WORLD_HOTELS_DATA from "@/app/data/worldHotels";
+import {
+  URBAN_CITY_SEEDS,
+  type UrbanCitySeed,
+} from "@/app/data/urbanCitySeeds";
 
 type BaseCoord = { lat: number; lng: number };
 type BaseHotelInput = Omit<Hotel, "lat" | "lng">;
@@ -96,6 +100,9 @@ const COUNTRY_COORDS: Record<string, BaseCoord> = {
   AE: { lat: 24.3, lng: 54.3 },
   TR: { lat: 39.0, lng: 35.2 },
   BR: { lat: -14.2, lng: -51.9 },
+  PH: { lat: 14.6, lng: 121.0 },
+  RU: { lat: 55.75, lng: 37.62 },
+  CR: { lat: 9.93, lng: -84.08 },
 };
 
 const WORLD_CITY_COORDS: Record<string, BaseCoord> = {
@@ -130,10 +137,20 @@ const WORLD_CITY_COORDS: Record<string, BaseCoord> = {
   "dubai": { lat: 25.2048, lng: 55.2708 },
   "istanbul": { lat: 41.0082, lng: 28.9784 },
   "sao paulo": { lat: -23.5505, lng: -46.6333 },
+  "manila": { lat: 14.5995, lng: 120.9842 },
+  "moscow": { lat: 55.7558, lng: 37.6173 },
+  "san jose": { lat: 9.9281, lng: -84.0907 },
 };
 
 const JITTER_LAT = 0.25;
 const JITTER_LNG = 0.25;
+const URBAN_CLUSTER_JITTER_LAT = 0.42;
+const URBAN_CLUSTER_JITTER_LNG = 0.42;
+const URBAN_CLUSTER_KEYWORD = "urban-cluster";
+const CHINA_SPREAD_MULTIPLIER = 15;
+const GLOBAL_OVERSEAS_SPREAD_MULTIPLIER = 5;
+const RADIAL_SPREAD_RANGE_FACTOR = 1.45;
+const RADIAL_EDGE_FALLOFF_POWER = 3.8;
 
 const hashString = (value: string): number => {
   let hash = 2166136261;
@@ -155,10 +172,116 @@ const mulberry32 = (seed: number) => {
   };
 };
 
+const normalizeCityLookupKey = (value: string): string =>
+  value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\./g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+const buildDensityLookupKey = (
+  cityRaw: string | undefined,
+  countryCodeRaw: string | undefined,
+): string => {
+  const cityKey = normalizeCityLookupKey(String(cityRaw ?? ""));
+  const countryCode = String(countryCodeRaw ?? "").trim().toUpperCase();
+  if (!cityKey || !countryCode) return "";
+  return `${countryCode}::${cityKey}`;
+};
+
+const buildCityCountryLookupKey = (
+  cityRaw: string,
+  countryCodeRaw: string,
+): string => {
+  const cityKey = normalizeCityLookupKey(cityRaw);
+  const countryCode = countryCodeRaw.trim().toUpperCase();
+  if (!cityKey || !countryCode) return "";
+  return `${countryCode}::${cityKey}`;
+};
+
+const SEED_CITY_COORDS: Record<string, BaseCoord> = Object.fromEntries(
+  URBAN_CITY_SEEDS
+    .map((seed) => {
+      const key = buildCityCountryLookupKey(seed.city, seed.countryCode);
+      if (!key) return null;
+      return [key, { lat: seed.lat, lng: seed.lng }] as const;
+    })
+    .filter((entry): entry is readonly [string, BaseCoord] => !!entry),
+);
+
+const buildAutoWorldCityCoords = (
+  hotels: BaseHotelInput[],
+): Record<string, BaseCoord> => {
+  const generated: Record<string, BaseCoord> = {};
+  const cityToCountries = new Map<string, Set<string>>();
+
+  for (const hotel of hotels) {
+    const cityRaw = String(hotel.city ?? "").trim();
+    const countryCode = String(hotel.countryCode ?? "").trim().toUpperCase();
+    const cityKey = normalizeCityLookupKey(cityRaw);
+    if (!cityKey || !countryCode) continue;
+
+    const cityCountryKey = buildCityCountryLookupKey(cityRaw, countryCode);
+    if (!cityCountryKey) continue;
+
+    if (!cityToCountries.has(cityKey)) {
+      cityToCountries.set(cityKey, new Set<string>());
+    }
+    cityToCountries.get(cityKey)?.add(countryCode);
+
+    if (generated[cityCountryKey]) continue;
+
+    if (WORLD_CITY_COORDS[cityKey]) {
+      generated[cityCountryKey] = WORLD_CITY_COORDS[cityKey];
+      continue;
+    }
+
+    const countryAnchor = COUNTRY_COORDS[countryCode];
+    const regionAnchor = hotel.region ? REGION_COORDS[hotel.region] : undefined;
+    const base = countryAnchor ?? regionAnchor ?? { lat: 0, lng: 0 };
+
+    const rand = mulberry32(hashString(cityCountryKey));
+    const lat = Math.max(-85, Math.min(85, base.lat + (rand() - 0.5) * 2.2));
+    const lng = Math.max(-180, Math.min(180, base.lng + (rand() - 0.5) * 2.2));
+    generated[cityCountryKey] = { lat, lng };
+  }
+
+  for (const [cityKey, countries] of cityToCountries.entries()) {
+    if (WORLD_CITY_COORDS[cityKey]) continue;
+    if (countries.size !== 1) continue;
+    const onlyCountry = Array.from(countries)[0];
+    const cityCountryKey = `${onlyCountry}::${cityKey}`;
+    const coord = generated[cityCountryKey];
+    if (coord) {
+      generated[cityKey] = coord;
+    }
+  }
+
+  return generated;
+};
+
 const getBaseCoord = (hotel: BaseHotelInput): BaseCoord => {
-  const cityKey = String(hotel.city ?? "").trim().toLowerCase();
+  const cityRaw = String(hotel.city ?? "");
+  const countryCode = String(hotel.countryCode ?? "").trim().toUpperCase();
+  const cityKey = normalizeCityLookupKey(cityRaw);
+  const cityCountryKey = buildCityCountryLookupKey(cityRaw, countryCode);
+
+  if (cityCountryKey && SEED_CITY_COORDS[cityCountryKey]) {
+    return SEED_CITY_COORDS[cityCountryKey];
+  }
+
+  if (cityCountryKey && AUTO_WORLD_CITY_COORDS[cityCountryKey]) {
+    return AUTO_WORLD_CITY_COORDS[cityCountryKey];
+  }
+
   if (cityKey && WORLD_CITY_COORDS[cityKey]) {
     return WORLD_CITY_COORDS[cityKey];
+  }
+
+  if (cityKey && AUTO_WORLD_CITY_COORDS[cityKey]) {
+    return AUTO_WORLD_CITY_COORDS[cityKey];
   }
 
   if (hotel.pref && PREF_COORDS[hotel.pref]) {
@@ -169,15 +292,84 @@ const getBaseCoord = (hotel: BaseHotelInput): BaseCoord => {
     return PREF_COORDS[hotel.admin1];
   }
 
-  if (hotel.region && REGION_COORDS[hotel.region]) {
-    return REGION_COORDS[hotel.region];
-  }
-
   if (hotel.countryCode && COUNTRY_COORDS[hotel.countryCode]) {
     return COUNTRY_COORDS[hotel.countryCode];
   }
 
+  if (hotel.region && REGION_COORDS[hotel.region]) {
+    return REGION_COORDS[hotel.region];
+  }
+
   return { lat: 36.2048, lng: 138.2529 };
+};
+
+const generateWeirdOffset = (
+  rand: () => number,
+  latRadius: number,
+  lngRadius: number,
+  shapeIndex: number,
+): { latOffset: number; lngOffset: number } => {
+  const twoPi = Math.PI * 2;
+  const angle = rand() * twoPi;
+  const core = Math.pow(rand(), RADIAL_EDGE_FALLOFF_POWER);
+
+  switch (shapeIndex % 5) {
+    case 0: {
+      const arms = 3 + Math.floor(rand() * 3);
+      const arm = Math.floor(rand() * arms);
+      const armAngle = (arm / arms) * twoPi;
+      const theta = armAngle + core * 4.2 + (rand() - 0.5) * 0.45;
+      const radius = core;
+      return {
+        latOffset: Math.cos(theta) * latRadius * radius,
+        lngOffset: Math.sin(theta) * lngRadius * radius,
+      };
+    }
+    case 1: {
+      const petals = 4 + Math.floor(rand() * 3);
+      const petalGain = 0.18 + 0.82 * Math.abs(Math.sin(petals * angle));
+      const radius = core * petalGain;
+      return {
+        latOffset: Math.cos(angle) * latRadius * radius,
+        lngOffset: Math.sin(angle) * lngRadius * radius,
+      };
+    }
+    case 2: {
+      const side = rand() < 0.5 ? -1 : 1;
+      const theta = side * (Math.PI * 0.5) + (rand() - 0.5) * 1.5;
+      const radius = 0.15 + core * 0.95;
+      return {
+        latOffset: Math.cos(theta) * latRadius * radius,
+        lngOffset: Math.sin(theta) * lngRadius * radius,
+      };
+    }
+    case 3: {
+      const axis = (rand() - 0.5) * Math.PI;
+      const longitudinal = (rand() - 0.5) * 0.24;
+      const lateral = (rand() - 0.5) * 0.1;
+      const outward = Math.sign(longitudinal || 1) * Math.pow(rand(), 3.8) * 0.88;
+      const x = longitudinal + outward;
+      const y = lateral;
+      const cosA = Math.cos(axis);
+      const sinA = Math.sin(axis);
+      const rx = x * cosA - y * sinA;
+      const ry = x * sinA + y * cosA;
+      return {
+        latOffset: rx * latRadius,
+        lngOffset: ry * lngRadius,
+      };
+    }
+    default: {
+      const ringWeight = rand() < 0.22;
+      const radius = ringWeight
+        ? 0.75 + Math.pow(rand(), 2.4) * 0.25
+        : Math.pow(rand(), RADIAL_EDGE_FALLOFF_POWER + 0.9);
+      return {
+        latOffset: Math.cos(angle) * latRadius * radius,
+        lngOffset: Math.sin(angle) * lngRadius * radius,
+      };
+    }
+  }
 };
 
 const deriveLatLng = (hotel: BaseHotelInput): BaseCoord => {
@@ -186,8 +378,63 @@ const deriveLatLng = (hotel: BaseHotelInput): BaseCoord => {
   );
   const rand = mulberry32(seed);
   const base = getBaseCoord(hotel);
-  const latOffset = (rand() - 0.5) * JITTER_LAT;
-  const lngOffset = (rand() - 0.5) * JITTER_LNG;
+  const isUrbanCluster = [hotel.description, hotel.district]
+    .map((value) => String(value ?? "").toLowerCase())
+    .some((value) => value.includes(URBAN_CLUSTER_KEYWORD));
+  let jitterLat = isUrbanCluster ? URBAN_CLUSTER_JITTER_LAT : JITTER_LAT;
+  let jitterLng = isUrbanCluster ? URBAN_CLUSTER_JITTER_LNG : JITTER_LNG;
+
+  if (isUrbanCluster) {
+    const densityKey = buildDensityLookupKey(hotel.city, hotel.countryCode);
+    const cityDensity = densityKey ? URBAN_CITY_DENSITY[densityKey] ?? 1 : 1;
+    const densityScale =
+      cityDensity >= 120
+        ? 0.55
+        : cityDensity >= 80
+          ? 0.65
+          : cityDensity >= 50
+            ? 0.78
+            : cityDensity >= 30
+              ? 0.9
+              : cityDensity >= 18
+                ? 1.0
+                : 1.12;
+
+    jitterLat *= densityScale;
+    jitterLng *= densityScale;
+  }
+
+  const countryCode = (hotel.countryCode ?? "").toUpperCase();
+  if (countryCode && countryCode !== "JP" && countryCode !== "CN") {
+    jitterLat *= GLOBAL_OVERSEAS_SPREAD_MULTIPLIER;
+    jitterLng *= GLOBAL_OVERSEAS_SPREAD_MULTIPLIER;
+  }
+
+  if (countryCode === "CN") {
+    jitterLat *= CHINA_SPREAD_MULTIPLIER;
+    jitterLng *= CHINA_SPREAD_MULTIPLIER;
+  }
+
+  const useRadialSparseDistribution = isUrbanCluster || countryCode !== "JP";
+
+  let latOffset: number;
+  let lngOffset: number;
+
+  if (useRadialSparseDistribution) {
+    const latRadius = jitterLat * RADIAL_SPREAD_RANGE_FACTOR;
+    const lngRadius = jitterLng * RADIAL_SPREAD_RANGE_FACTOR;
+    const shapeSeed = hashString(
+      `${countryCode}-${hotel.city ?? ""}-${hotel.admin1 ?? ""}`,
+    );
+    const { latOffset: nextLatOffset, lngOffset: nextLngOffset } =
+      generateWeirdOffset(rand, latRadius, lngRadius, shapeSeed);
+    latOffset = nextLatOffset;
+    lngOffset = nextLngOffset;
+  } else {
+    latOffset = (rand() - 0.5) * jitterLat;
+    lngOffset = (rand() - 0.5) * jitterLng;
+  }
+
   return {
     lat: base.lat + latOffset,
     lng: base.lng + lngOffset,
@@ -328,13 +575,16 @@ const OVERSEAS_CITY_TEMPLATES: OverseasCityTemplate[] = [
   { countryCode: "US", country: "United States", city: "New York", admin1: "New York", region: "North America", aliases: ["new york", "ニューヨーク", "nyc"], motifs: ["ブロードウェイ", "摩天楼", "ジャズバー"] },
   { countryCode: "US", country: "United States", city: "Los Angeles", admin1: "California", region: "North America", aliases: ["los angeles", "ロサンゼルス", "la"], motifs: ["映画文化", "サンタモニカ", "アート地区"] },
   { countryCode: "CA", country: "Canada", city: "Toronto", region: "North America", aliases: ["toronto", "トロント"], motifs: ["湖畔", "多文化フード", "高層展望"] },
+  { countryCode: "CR", country: "Costa Rica", city: "San Jose", region: "Americas", aliases: ["san jose", "サンノゼ"], motifs: ["中央市場", "山並み", "都市公園"] },
   { countryCode: "AU", country: "Australia", city: "Sydney", region: "Oceania", aliases: ["sydney", "シドニー"], motifs: ["オペラハウス", "ハーバー", "サーフカルチャー"] },
+  { countryCode: "PH", country: "Philippines", city: "Manila", region: "Asia", aliases: ["manila", "マニラ"], motifs: ["湾岸夜景", "イントラムロス", "屋台文化"] },
   { countryCode: "SG", country: "Singapore", city: "Singapore", region: "Asia", aliases: ["singapore", "シンガポール"], motifs: ["ガーデンズ", "ホーカー文化", "ウォーターフロント"] },
   { countryCode: "KR", country: "Korea", city: "Seoul", region: "Asia", aliases: ["seoul", "ソウル"], motifs: ["韓屋", "ナイトマーケット", "デザインストリート"] },
   { countryCode: "TW", country: "Taiwan", city: "Taipei", region: "Asia", aliases: ["taipei", "台北"], motifs: ["夜市", "山並み", "茶文化"] },
   { countryCode: "TH", country: "Thailand", city: "Bangkok", region: "Asia", aliases: ["bangkok", "バンコク"], motifs: ["運河", "寺院群", "ルーフトップバー"] },
   { countryCode: "AE", country: "UAE", city: "Dubai", region: "Middle East", aliases: ["dubai", "ドバイ"], motifs: ["砂漠体験", "未来建築", "マリーナ"] },
   { countryCode: "TR", country: "Turkey", city: "Istanbul", region: "Middle East", aliases: ["istanbul", "イスタンブール"], motifs: ["ボスポラス海峡", "旧市街", "バザール"] },
+  { countryCode: "RU", country: "Russia", city: "Moscow", region: "Europe", aliases: ["moscow", "モスクワ"], motifs: ["赤の広場", "クレムリン", "大通り"] },
   { countryCode: "BR", country: "Brazil", city: "Sao Paulo", region: "South America", aliases: ["sao paulo", "サンパウロ"], motifs: ["ストリートアート", "カフェ文化", "都市公園"] },
 ];
 
@@ -395,6 +645,180 @@ const generateOverseasHotels = (
         type: OVERSEAS_TYPE_ROTATION[index % OVERSEAS_TYPE_ROTATION.length],
         breakfast: nextId % 2 === 0,
         imageUrl: "/images/hotel_placeholder.png",
+      });
+
+      nextId += 1;
+    }
+  }
+
+  return generated;
+};
+
+const URBAN_NAME_PREFIXES = [
+  "Central",
+  "Metro",
+  "City",
+  "Square",
+  "Downtown",
+  "Axis",
+  "Prime",
+  "Core",
+];
+
+const URBAN_PROPERTY_SUFFIXES = [
+  "Hotel",
+  "Suites",
+  "Residence",
+  "Inn",
+  "Stay",
+];
+
+const clampNumber = (value: number, min: number, max: number): number =>
+  Math.max(min, Math.min(max, value));
+
+const populationToClusterCount = (populationRaw: number): number => {
+  const population = Number.isFinite(populationRaw)
+    ? Math.max(30000, Math.round(populationRaw))
+    : 30000;
+  const minPop = 30000;
+  const maxPop = 30000000;
+  const ratio =
+    (Math.log10(population) - Math.log10(minPop)) /
+    (Math.log10(maxPop) - Math.log10(minPop));
+  const scaled = 20 + clampNumber(ratio, 0, 1) * (500 - 20);
+  return clampNumber(Math.round(scaled), 20, 500);
+};
+
+const generatePopulationSeedHotels = (
+  seeds: UrbanCitySeed[],
+  startId: number,
+): BaseHotelInput[] => {
+  let nextId = startId;
+  const generated: BaseHotelInput[] = [];
+
+  for (const seed of seeds) {
+    const count = populationToClusterCount(seed.population);
+    const aliases = Array.from(
+      new Set([
+        seed.city,
+        seed.country,
+        ...(seed.aliases ?? []),
+        "city center",
+        "downtown",
+      ]),
+    );
+
+    for (let index = 0; index < count; index += 1) {
+      const prefix =
+        URBAN_NAME_PREFIXES[(index + seed.city.length) % URBAN_NAME_PREFIXES.length];
+      const suffix =
+        URBAN_PROPERTY_SUFFIXES[(index + seed.countryCode.length) % URBAN_PROPERTY_SUFFIXES.length];
+
+      generated.push({
+        id: nextId,
+        name: `${seed.city} ${prefix} ${suffix}`,
+        description: `${seed.city}の人口規模に基づく自動生成データ（${URBAN_CLUSTER_KEYWORD}）。`,
+        price: 8500 + ((nextId * 113) % 26000),
+        available: nextId % 9 !== 0,
+        region: seed.region,
+        pref: seed.admin1 ?? seed.city,
+        admin1: seed.admin1,
+        city: seed.city,
+        countryCode: seed.countryCode.toUpperCase(),
+        country: seed.country,
+        district: `${seed.city} Center ${URBAN_CLUSTER_KEYWORD}`,
+        searchAliases: aliases,
+        type: index % 6 === 0 ? "minpaku" : "hotel",
+        breakfast: index % 2 === 0,
+        imageUrl: "/images/hotel_placeholder.png",
+      });
+
+      nextId += 1;
+    }
+  }
+
+  return generated;
+};
+
+const generateUrbanClusterHotels = (
+  sourceHotels: BaseHotelInput[],
+  startId: number,
+): BaseHotelInput[] => {
+  const groups = new Map<string, BaseHotelInput[]>();
+
+  for (const hotel of sourceHotels) {
+    const city = String(hotel.city ?? "").trim();
+    const countryCode = String(hotel.countryCode ?? "").trim().toUpperCase();
+    if (!city || city.toLowerCase() === "unknown city" || !countryCode) {
+      continue;
+    }
+    const key = `${countryCode}::${city.toLowerCase()}`;
+    const current = groups.get(key) ?? [];
+    current.push(hotel);
+    groups.set(key, current);
+  }
+
+  let nextId = startId;
+  const generated: BaseHotelInput[] = [];
+  const maxGenerated = 2400;
+
+  for (const entries of groups.values()) {
+    if (!entries.length) continue;
+    const representative = entries[0];
+    const city = representative.city ?? "Unknown City";
+    const countryCode = (representative.countryCode ?? "UN").toUpperCase();
+    const cityKey = city.trim().toLowerCase();
+    const hasKnownCityCoord = !!WORLD_CITY_COORDS[cityKey];
+
+    const baseCount = entries.length;
+    const densityScore = baseCount + (hasKnownCityCoord ? 3 : 1);
+    const extraCount = Math.max(2, Math.min(22, densityScore * 2));
+
+    for (let index = 0; index < extraCount; index += 1) {
+      if (generated.length >= maxGenerated) {
+        return generated;
+      }
+
+      const prefix =
+        URBAN_NAME_PREFIXES[(index + city.length) % URBAN_NAME_PREFIXES.length];
+      const suffix =
+        URBAN_PROPERTY_SUFFIXES[(index + countryCode.length) % URBAN_PROPERTY_SUFFIXES.length];
+      const seedHotel = entries[index % entries.length];
+      const basePrice = Number(seedHotel.price);
+      const adjustedPrice = Number.isFinite(basePrice)
+        ? Math.max(6000, Math.round(basePrice * (0.85 + ((index % 6) * 0.06))))
+        : 9000 + ((nextId * 97) % 18000);
+
+      const districtBase =
+        typeof seedHotel.district === "string" && seedHotel.district.trim().length > 0
+          ? seedHotel.district.trim()
+          : `${city} Center`;
+
+      generated.push({
+        id: nextId,
+        name: `${city} ${prefix} ${suffix}`,
+        description: `${city}の市街地アクセスを重視した自動生成データ（${URBAN_CLUSTER_KEYWORD}）。`,
+        price: adjustedPrice,
+        available: nextId % 8 !== 0,
+        region: seedHotel.region,
+        pref: seedHotel.pref,
+        admin1: seedHotel.admin1,
+        city,
+        countryCode,
+        country: seedHotel.country,
+        district: `${districtBase} ${URBAN_CLUSTER_KEYWORD}`,
+        searchAliases: Array.from(
+          new Set([
+            city,
+            seedHotel.country ?? countryCode,
+            "city center",
+            "downtown",
+            ...(seedHotel.searchAliases ?? []),
+          ]),
+        ),
+        type: index % 5 === 0 ? "minpaku" : "hotel",
+        breakfast: index % 2 === 0,
+        imageUrl: seedHotel.imageUrl || "/images/hotel_placeholder.png",
       });
 
       nextId += 1;
@@ -5628,16 +6052,48 @@ const RAW_HOTELS: Array<Omit<Hotel, "lat" | "lng">> = [
 ];
 
 const OVERSEAS_HOTELS = generateOverseasHotels(1001, 26);
+const POPULATION_SEED_HOTELS = generatePopulationSeedHotels(
+  URBAN_CITY_SEEDS,
+  950000,
+);
 const WORLD_HOTELS: BaseHotelInput[] = Object.values(WORLD_HOTELS_DATA)
   .flatMap((value) =>
     Array.isArray(value) ? (value as Record<string, unknown>[]) : [],
   )
   .map((item, index) => normalizeWorldHotel(item, index));
+const AUTO_WORLD_CITY_COORDS = buildAutoWorldCityCoords([
+  ...WORLD_HOTELS,
+  ...OVERSEAS_HOTELS,
+  ...POPULATION_SEED_HOTELS,
+]);
+const URBAN_CLUSTER_HOTELS = generateUrbanClusterHotels(WORLD_HOTELS, 700000);
+
+const buildUrbanCityDensity = (
+  hotels: BaseHotelInput[],
+): Record<string, number> => {
+  const counts = new Map<string, number>();
+  for (const hotel of hotels) {
+    const key = buildDensityLookupKey(hotel.city, hotel.countryCode);
+    if (!key) continue;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return Object.fromEntries(counts);
+};
+
+const URBAN_CITY_DENSITY = buildUrbanCityDensity([
+  ...WORLD_HOTELS,
+  ...OVERSEAS_HOTELS,
+  ...POPULATION_SEED_HOTELS,
+  ...URBAN_CLUSTER_HOTELS,
+]);
 
 const ALL_RAW_HOTELS: BaseHotelInput[] = [
   ...RAW_HOTELS,
   ...OVERSEAS_HOTELS,
   ...WORLD_HOTELS,
+  ...POPULATION_SEED_HOTELS,
+  ...URBAN_CLUSTER_HOTELS,
 ];
 
 export const HOTELS: Hotel[] = ALL_RAW_HOTELS.map((hotel) => {
