@@ -7,6 +7,10 @@ type RouteParams = { id: string };
 export default function Page({ params }: { params: Promise<RouteParams> }) {
   const { id } = use(params);
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const [heightCm, setHeightCm] = useState<number>(170);
+  const [bodyWidthPercent, setBodyWidthPercent] = useState<number>(100);
+  const heightCmRef = useRef<number>(170);
+  const bodyWidthPercentRef = useRef<number>(100);
 
   // 端末に応じて高さをフィット（モバイルのアドレスバーを考慮）
   const [vh, setVh] = useState<number>(0);
@@ -42,6 +46,14 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
         { type: "setMobile", payload: isMobile ? 1 : 0 },
         "*"
       );
+      frameEl?.contentWindow?.postMessage(
+        { type: "setHeight", payload: (heightCmRef.current / 100).toFixed(2) },
+        "*"
+      );
+      frameEl?.contentWindow?.postMessage(
+        { type: "setBodyWidth", payload: (bodyWidthPercentRef.current / 100).toFixed(2) },
+        "*"
+      );
       frameEl?.contentWindow?.postMessage({ type: "warpNow" }, "*");
       // 将来のID連携用（いまはランダム遷移で誤魔化す）
       // frameEl?.contentWindow?.postMessage(
@@ -66,6 +78,28 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
     };
   }, [id]);
 
+  useEffect(() => {
+    heightCmRef.current = heightCm;
+    const frameEl = frameRef.current;
+    if (!frameEl) return;
+
+    frameEl.contentWindow?.postMessage(
+      { type: "setHeight", payload: (heightCm / 100).toFixed(2) },
+      "*"
+    );
+  }, [heightCm]);
+
+  useEffect(() => {
+    bodyWidthPercentRef.current = bodyWidthPercent;
+    const frameEl = frameRef.current;
+    if (!frameEl) return;
+
+    frameEl.contentWindow?.postMessage(
+      { type: "setBodyWidth", payload: (bodyWidthPercent / 100).toFixed(2) },
+      "*"
+    );
+  }, [bodyWidthPercent]);
+
   // ヘッダや余白ぶんのオフセット（適宜調整）
   const HEADER_OFFSET = 120; // px
   const containerStyle: React.CSSProperties = vh
@@ -74,23 +108,60 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
 
   return (
     <main className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">操作方法: WASDで移動、Eで車椅子に乗る、Fでワープポイントに移動、Hでホテルメニュー</h1>
-      <div
-        className="w-full border rounded overflow-hidden min-h-[360px]"
-        style={containerStyle}
-      >
-        <iframe
-          ref={frameRef}
-          id="unityFrame"
-          // 本番は GitHub Pages / ローカルは public 配下の WebGL を参照
-          src={`${
-            process.env.NODE_ENV === "production"
-              ? "https://ro-dina.github.io/hotel3d/unity/WebGLBuild/index.html"
-              : "/view3d/WebGLBuild/index.html"
-          }?unityObject=HotelAutoWarpReceiver`}
-          className="w-full h-full"
-          allowFullScreen
-        />
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">操作方法: WASDで移動、Eで車椅子に乗る、Fでワープポイントに移動、Hでホテルメニュー</h1>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 items-stretch">
+        <div
+          className="w-full border rounded overflow-hidden min-h-[360px]"
+          style={containerStyle}
+        >
+          <iframe
+            ref={frameRef}
+            id="unityFrame"
+            // 本番は GitHub Pages / ローカルは public 配下の WebGL を参照
+            src={`${
+              process.env.NODE_ENV === "production"
+                ? "https://ro-dina.github.io/hotel3d/unity/WebGLBuild/index.html"
+                : "/view3d/WebGLBuild/index.html"
+            }?unityObject=HotelAutoWarpReceiver`}
+            className="w-full h-full"
+            allowFullScreen
+          />
+        </div>
+
+        <aside className="border border-gray-200 dark:border-gray-700 rounded p-4 space-y-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+          <h2 className="text-lg font-semibold">身長設定</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            身長は縦横比を保って変化します。体型は腹囲スライダーで横幅だけ調整できます。
+          </p>
+
+          <label htmlFor="height-slider" className="block text-sm font-medium">
+            身長: <span className="font-bold">{heightCm} cm</span>
+          </label>
+          <input
+            id="height-slider"
+            type="range"
+            min={120}
+            max={220}
+            step={1}
+            value={heightCm}
+            onChange={(e) => setHeightCm(Number(e.target.value))}
+            className="w-full"
+          />
+
+          <label htmlFor="body-width-slider" className="block text-sm font-medium">
+            体型(腹囲): <span className="font-bold">{bodyWidthPercent}%</span>
+          </label>
+          <input
+            id="body-width-slider"
+            type="range"
+            min={70}
+            max={140}
+            step={1}
+            value={bodyWidthPercent}
+            onChange={(e) => setBodyWidthPercent(Number(e.target.value))}
+            className="w-full"
+          />
+        </aside>
       </div>
     </main>
   );
