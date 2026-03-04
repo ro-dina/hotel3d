@@ -80,7 +80,7 @@ export default function CheckoutClient() {
         <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
           <h1 className="text-2xl font-bold">予約内容の最終確認</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-1">
-            内容を確認して「予約を確定する」を押してください。
+            内容を確認して「予約確定(ダミー) → 予約確定メール(ダミー)」を押してください。
           </p>
         </section>
 
@@ -124,7 +124,7 @@ export default function CheckoutClient() {
             disabled={submitting}
             className="flex-1 rounded-lg py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold"
           >
-            {submitting ? "確定中..." : "予約を確定する"}
+            {submitting ? "予約確定メール送信中(ダミー)..." : "予約確定(ダミー) → 予約確定メール(ダミー)"}
           </button>
         </div>
       </div>

@@ -49,6 +49,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "有効期限の形式が不正です" }, { status: 400 });
     }
 
+    // Hotelマスタが空でも予約できるように、存在しなければ作成してFKエラーを防ぐ
+    await prisma.hotel.upsert({
+      where: { id: hotelId },
+      update: {
+        name: hotelName,
+      },
+      create: {
+        id: hotelId,
+        name: hotelName,
+        description: "Auto-created from reservation flow",
+        price: Number(body?.price ?? 0) || 0,
+        available: true,
+      },
+    });
+
     const reservation = await prisma.reservation.create({
       data: {
         hotelId,
@@ -86,7 +101,8 @@ export async function POST(req: Request) {
       mailSent: mailResult.sent,
       cardStoredEncrypted: Boolean(cardEncrypted && cardCvcEncrypted),
     });
-  } catch {
-    return NextResponse.json({ error: "予約確定に失敗しました" }, { status: 500 });
+  } catch (err) {
+    console.error("[reservations] failed:", err);
+    return NextResponse.json({ error: "予約確定に失敗しました（DB保存エラー）" }, { status: 500 });
   }
 }
