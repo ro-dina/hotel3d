@@ -1,6 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { HOTELS } from "@/app/data/mockHotels";
+import { IMAGE_LIST } from "@/app/data/imageList";
+import FallbackImage from "@/app/components/FallbackImage";
 import type { Hotel } from "@/types/Hotel";
 
 // -----------------------------------------------------------------------------
@@ -22,7 +23,7 @@ const floatRange = (
   min: number,
   max: number,
   offset: number,
-  fixed: number = 1
+  fixed: number = 1,
 ) => {
   const r = pseudoRandom(id, offset);
   const val = r * (max - min) + min;
@@ -84,9 +85,32 @@ const AMENITIES = [
 const getAmenities = (id: number) => {
   const count = range(id, 6, 10, 20);
   const shuffled = [...AMENITIES].sort(
-    (a, b) => pseudoRandom(id, a.length) - 0.5
+    (a, b) => pseudoRandom(id, a.length) - 0.5,
   );
   return shuffled.slice(0, count);
+};
+
+const pickGalleryImages = (
+  seed: number,
+  baseImage: string,
+  count: number,
+): string[] => {
+  const pool = Array.from(new Set([baseImage, ...IMAGE_LIST])).filter(Boolean);
+  if (!pool.length) return [baseImage];
+
+  const result: string[] = [baseImage];
+  let offset = 101;
+
+  while (result.length < count && result.length < pool.length) {
+    const idx = Math.floor(pseudoRandom(seed, offset) * pool.length);
+    const candidate = pool[idx];
+    if (candidate && !result.includes(candidate)) {
+      result.push(candidate);
+    }
+    offset += 1;
+  }
+
+  return result;
 };
 
 // -----------------------------------------------------------------------------
@@ -106,23 +130,30 @@ export default async function HotelDetailPage(props: unknown) {
   const hotel: Hotel | undefined = HOTELS.find((h) => String(h.id) === id);
 
   if (!hotel)
-    return <div className="p-10 text-center text-slate-500">データが見つかりません</div>;
+    return (
+      <div className="p-10 text-center text-slate-500">
+        データが見つかりません
+      </div>
+    );
 
   const specs = getExtendedSpecs(hotelIdNum);
   const amenities = getAmenities(hotelIdNum);
+  const galleryImages = pickGalleryImages(hotelIdNum, hotel.imageUrl, 18);
+  const locationLabel =
+    [hotel.city, hotel.district, hotel.admin1 ?? hotel.pref, hotel.country]
+      .filter((value): value is string => !!value && value.trim().length > 0)
+      .join("・") || [hotel.region, hotel.pref].filter(Boolean).join("・");
 
   return (
     <main className="min-h-screen pb-20 bg-gray-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 transition-colors duration-300">
-      
       {/* HEADER IMAGE */}
       <div className="relative h-[55vh] w-full overflow-hidden bg-black">
-        <Image
-          src={hotel.imageUrl}
+        <FallbackImage
+          src={galleryImages[0]}
           alt={hotel.name}
-          fill
-          className="object-cover opacity-70"
-          priority
-          unoptimized
+          width={1800}
+          height={1000}
+          className="absolute inset-0 h-full w-full object-cover opacity-70"
         />
         {/* ダーク/ライト両対応のグラデーション */}
         <div className="absolute inset-0 bg-gradient-to-t from-gray-50 dark:from-slate-950 via-transparent to-black/40" />
@@ -145,23 +176,19 @@ export default async function HotelDetailPage(props: unknown) {
               <span className="w-1 h-3 bg-white/30" />
               <span>3D計測済み</span>
             </div>
-            <h1
-              className="text-4xl md:text-6xl font-black mb-2 text-slate-900 dark:text-white leading-none drop-shadow-xl"
-            >
+            <h1 className="text-4xl md:text-6xl font-black mb-2 text-slate-900 dark:text-white leading-none drop-shadow-xl">
               {hotel.name}
             </h1>
             <p className="text-lg font-bold text-slate-700 dark:text-slate-200 max-w-2xl bg-white/60 dark:bg-black/40 backdrop-blur-sm p-2 rounded inline-block">
-              {hotel.region}・{hotel.pref}
+              {locationLabel || "所在地不明"}
             </p>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 -mt-10 relative z-20 grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-        
         {/* === LEFT COLUMN === */}
         <div className="space-y-8">
-          
           {/* 1. PHYSICAL DIMENSIONS */}
           <section className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 transition-colors">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2 border-b border-gray-100 dark:border-slate-800 pb-4">
@@ -180,7 +207,9 @@ export default async function HotelDetailPage(props: unknown) {
                 </div>
                 <div className="text-4xl font-black text-slate-900 dark:text-white">
                   {specs.area}
-                  <span className="text-lg font-medium ml-1 text-gray-500 dark:text-slate-400">㎡</span>
+                  <span className="text-lg font-medium ml-1 text-gray-500 dark:text-slate-400">
+                    ㎡
+                  </span>
                 </div>
               </div>
               <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 flex flex-col justify-center items-center text-center">
@@ -189,7 +218,9 @@ export default async function HotelDetailPage(props: unknown) {
                 </div>
                 <div className="text-4xl font-black text-slate-900 dark:text-white">
                   {specs.ceilingHeight}
-                  <span className="text-lg font-medium ml-1 text-gray-500 dark:text-slate-400">m</span>
+                  <span className="text-lg font-medium ml-1 text-gray-500 dark:text-slate-400">
+                    m
+                  </span>
                 </div>
               </div>
             </div>
@@ -282,19 +313,25 @@ export default async function HotelDetailPage(props: unknown) {
                     <div className="text-xs text-gray-400 dark:text-slate-500 font-bold mb-1">
                       Ping値
                     </div>
-                    <div className="font-bold text-slate-900 dark:text-white">{specs.ping} ms</div>
+                    <div className="font-bold text-slate-900 dark:text-white">
+                      {specs.ping} ms
+                    </div>
                   </div>
                   <div className="text-center">
                     <div className="text-xs text-gray-400 dark:text-slate-500 font-bold mb-1">
                       コンセント数
                     </div>
-                    <div className="font-bold text-slate-900 dark:text-white">{specs.outlets} 口</div>
+                    <div className="font-bold text-slate-900 dark:text-white">
+                      {specs.outlets} 口
+                    </div>
                   </div>
                   <div className="text-center">
                     <div className="text-xs text-gray-400 dark:text-slate-500 font-bold mb-1">
                       照度 (机上)
                     </div>
-                    <div className="font-bold text-slate-900 dark:text-white">{specs.illuminance} lux</div>
+                    <div className="font-bold text-slate-900 dark:text-white">
+                      {specs.illuminance} lux
+                    </div>
                   </div>
                 </div>
               </div>
@@ -315,7 +352,9 @@ export default async function HotelDetailPage(props: unknown) {
 
           {/* 4. DESCRIPTION & AMENITIES */}
           <section className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 transition-colors">
-            <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">施設概要</h3>
+            <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">
+              施設概要
+            </h3>
             <p className="text-gray-600 dark:text-slate-300 leading-relaxed mb-8">
               {hotel.description}
               <br />
@@ -325,7 +364,9 @@ export default async function HotelDetailPage(props: unknown) {
               の高精細モデルにより、 現地の空気感まで再現されています。
             </p>
 
-            <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">設備・アメニティ</h3>
+            <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">
+              設備・アメニティ
+            </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {amenities.map((item, i) => (
                 <div
@@ -337,12 +378,34 @@ export default async function HotelDetailPage(props: unknown) {
               ))}
             </div>
           </section>
+
+          {/* 5. PHOTO GALLERY */}
+          <section className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 transition-colors">
+            <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">
+              写真ギャラリー
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+              {galleryImages.map((src, index) => (
+                <div
+                  key={`${hotel.id}-${index}-${src}`}
+                  className="overflow-hidden rounded-xl border border-gray-100 dark:border-slate-700 bg-gray-100 dark:bg-slate-800"
+                >
+                  <FallbackImage
+                    src={src}
+                    alt={`${hotel.name} ギャラリー ${index + 1}`}
+                    width={900}
+                    height={600}
+                    className="h-32 w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
 
         {/* === RIGHT COLUMN (Sticky) === */}
         <div className="relative">
           <div className="sticky top-24 space-y-4">
-            
             {/* 3D LAUNCHER CARD (Always Dark Theme) */}
             <div className="bg-slate-950 text-white p-6 rounded-2xl shadow-2xl relative overflow-hidden group border border-slate-800">
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20" />
@@ -376,12 +439,20 @@ export default async function HotelDetailPage(props: unknown) {
 
               <div className="space-y-2 mb-6 text-sm">
                 <div className="flex justify-between border-b border-dashed border-gray-200 dark:border-slate-700 py-2">
-                  <span className="text-gray-500 dark:text-slate-400">計測日</span>
-                  <span className="font-mono text-slate-700 dark:text-slate-200">{specs.scanDate}</span>
+                  <span className="text-gray-500 dark:text-slate-400">
+                    計測日
+                  </span>
+                  <span className="font-mono text-slate-700 dark:text-slate-200">
+                    {specs.scanDate}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-dashed border-gray-200 dark:border-slate-700 py-2">
-                  <span className="text-gray-500 dark:text-slate-400">ポリゴン数</span>
-                  <span className="font-mono text-slate-700 dark:text-slate-200">{specs.polygons}</span>
+                  <span className="text-gray-500 dark:text-slate-400">
+                    ポリゴン数
+                  </span>
+                  <span className="font-mono text-slate-700 dark:text-slate-200">
+                    {specs.polygons}
+                  </span>
                 </div>
               </div>
 
@@ -425,19 +496,25 @@ function DataCard({ label, value, sub, warning }: DataCardProps) {
     >
       <div
         className={`text-[10px] font-bold tracking-wider mb-1 ${
-          warning ? "text-red-500 dark:text-red-400" : "text-gray-400 dark:text-slate-500"
+          warning
+            ? "text-red-500 dark:text-red-400"
+            : "text-gray-400 dark:text-slate-500"
         }`}
       >
         {label}
       </div>
       <div
         className={`text-xl md:text-2xl font-black ${
-          warning ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-white"
+          warning
+            ? "text-red-600 dark:text-red-400"
+            : "text-slate-900 dark:text-white"
         }`}
       >
         {value}
       </div>
-      <div className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">{sub}</div>
+      <div className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">
+        {sub}
+      </div>
     </div>
   );
 }
@@ -496,8 +573,12 @@ function CircleScore({ score, label }: CircleScoreProps) {
         />
       </svg>
       <div className="absolute text-center">
-        <div className="text-sm font-black text-slate-900 dark:text-white">{score}</div>
-        <div className="text-[8px] font-bold text-gray-500 dark:text-slate-500">{label}</div>
+        <div className="text-sm font-black text-slate-900 dark:text-white">
+          {score}
+        </div>
+        <div className="text-[8px] font-bold text-gray-500 dark:text-slate-500">
+          {label}
+        </div>
       </div>
     </div>
   );

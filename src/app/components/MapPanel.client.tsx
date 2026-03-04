@@ -26,6 +26,9 @@ type MapMarker = {
   lat: number;
   lng: number;
   label?: string;
+  subLabel?: string;
+  price?: number;
+  href?: string;
 };
 
 type FocusLocation = {
@@ -51,7 +54,9 @@ export type MapPanelProps = {
   selectedMarkerId?: MapMarker["id"] | null;
   showMarkersAtZoom?: number;
   focusLocation?: FocusLocation | null;
+  emphasizeMarkers?: boolean;
   onViewportChange?: (bounds: MapBounds) => void;
+  onZoomChange?: (zoom: number) => void;
   mapDimensions?: MapDimensions;
   panelClassName?: string;
   mapWrapperClassName?: string;
@@ -93,6 +98,8 @@ const DEFAULT_THRESHOLDS: ZoomThresholds = {
   detailToJapanDown: 14,
 };
 
+const MAX_PREFECTURE_DETAIL_PREFETCH = 12;
+
 type JapanTopology = Topology & {
   objects: Objects<GeoJsonProperties>;
 };
@@ -120,6 +127,14 @@ const PREF_KEYS = [
   "pref_name",
 ] as const;
 
+const escapeHtml = (value: string): string =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
 function getName(props: Record<string, unknown>): string | null {
   for (const key of TARGET_KEYS) {
     const value = props[key as keyof typeof props];
@@ -130,7 +145,7 @@ function getName(props: Record<string, unknown>): string | null {
 
 function getFirstStringValue<K extends readonly string[]>(
   props: Record<string, unknown>,
-  keys: K
+  keys: K,
 ): string | null {
   for (const key of keys) {
     const value = props[key as keyof typeof props];
@@ -167,7 +182,7 @@ function ringContainsPoint(point: Point, ring: number[][]): boolean {
 
 function polygonContainsPoint(
   point: Point,
-  coordinates: number[][][]
+  coordinates: number[][][],
 ): boolean {
   if (!coordinates.length) return false;
   if (!ringContainsPoint(point, coordinates[0])) return false;
@@ -181,7 +196,7 @@ function polygonContainsPoint(
 
 function containsPointInFeature(
   feature: Feature<Geometry, JPProps>,
-  point: Point
+  point: Point,
 ): boolean {
   if (!feature?.geometry) return false;
   if (feature.geometry.type === "Polygon") {
@@ -189,7 +204,7 @@ function containsPointInFeature(
   }
   if (feature.geometry.type === "MultiPolygon") {
     return feature.geometry.coordinates.some((coordinates) =>
-      polygonContainsPoint(point, coordinates)
+      polygonContainsPoint(point, coordinates),
     );
   }
   return false;
@@ -197,7 +212,7 @@ function containsPointInFeature(
 
 function findPrefectureNameAtPoint(
   featureCollection: FeatureCollection<Geometry, JPProps>,
-  point: Point
+  point: Point,
 ): string | null {
   if (!featureCollection?.features?.length) return null;
   for (const feature of featureCollection.features) {
@@ -260,7 +275,9 @@ export default function MapPanel({
   selectedMarkerId,
   showMarkersAtZoom = 8.5,
   focusLocation,
+  emphasizeMarkers = false,
   onViewportChange,
+  onZoomChange,
   mapDimensions,
   panelClassName,
   mapWrapperClassName,
@@ -275,7 +292,7 @@ export default function MapPanel({
   const [center, setCenter] = useState<[number, number]>([37.5, 139.0]);
   const [zoom, setZoom] = useState(4.5);
   const [geo, setGeo] = useState<FeatureCollection<Geometry, JPProps> | null>(
-    null
+    null,
   );
   const [prefectureGeo, setPrefectureGeo] = useState<FeatureCollection<
     Geometry,
@@ -286,12 +303,12 @@ export default function MapPanel({
   >({});
 
   const [selectedPrefecture, setSelectedPrefecture] = useState<string | null>(
-    null
+    null,
   );
 
   const thresholds = useMemo(
     () => ({ ...DEFAULT_THRESHOLDS, ...(thresholdsOverride ?? {}) }),
-    [thresholdsOverride]
+    [thresholdsOverride],
   );
 
   // --- Initialize Map ---
@@ -321,6 +338,7 @@ export default function MapPanel({
       const z = map.getZoom();
       setCenter([c.lat, c.lng]);
       setZoom(z);
+      onZoomChange?.(z);
       if (onViewportChange) {
         const bounds = map.getBounds();
         onViewportChange({
@@ -331,6 +349,17 @@ export default function MapPanel({
         });
       }
     });
+
+    onZoomChange?.(map.getZoom());
+    if (onViewportChange) {
+      const bounds = map.getBounds();
+      onViewportChange({
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest(),
+      });
+    }
 
     return () => {
       map.remove();
@@ -349,7 +378,7 @@ export default function MapPanel({
     // Check distance to avoid infinite loops or jitter
     const dist = Math.sqrt(
       Math.pow(currentCenter.lat - center[0], 2) +
-      Math.pow(currentCenter.lng - center[1], 2)
+        Math.pow(currentCenter.lng - center[1], 2),
     );
 
     // Only update if significantly changed or zoom changed
@@ -364,10 +393,9 @@ export default function MapPanel({
     setCenter(nextCenter);
     const targetZoom = focusLocation.zoom;
     if (typeof targetZoom === "number") {
-      setZoom((prev) => Math.min(Math.max(prev, targetZoom), maxZoom));
+      setZoom(Math.min(Math.max(targetZoom, 2), maxZoom));
     }
   }, [focusLocation, maxZoom]);
-
 
   // --- Logic for Levels and Data Fetching ---
 
@@ -407,33 +435,32 @@ export default function MapPanel({
     }
   }, [level, prefectureGeo]);
 
-  const versionedUrl = useMemo(() => {
-    const stamp = Date.now();
-    const suffix = `?v=${stamp}`;
-    return {
-      regions: `/maps/regions.json${suffix}`,
-      prefecture: `/maps/prefecture.json${suffix}`,
-      japan: `/maps/japan.json${suffix}`,
+  const mapUrls = useMemo(
+    () => ({
+      regions: "/maps/regions.json",
+      prefecture: "/maps/prefecture.json",
+      japan: "/maps/japan.json",
       prefectureDetail: (pref: string) =>
-        `/maps/prefectures/${encodeURIComponent(pref)}.json${suffix}`,
-    };
-  }, []);
+        `/maps/prefectures/${encodeURIComponent(pref)}.json`,
+    }),
+    [],
+  );
 
   const geographyUrl = useMemo(() => {
-    if (level === "regions") return versionedUrl.regions;
-    if (level === "prefecture") return versionedUrl.prefecture;
+    if (level === "regions") return mapUrls.regions;
+    if (level === "prefecture") return mapUrls.prefecture;
     if (level === "prefectureDetail" || level === "subDetail") {
       const prefToLoad = selectedPrefecture ?? centerPrefectureName;
-      if (prefToLoad) return versionedUrl.prefectureDetail(prefToLoad);
+      if (prefToLoad) return mapUrls.prefectureDetail(prefToLoad);
       return null;
     }
-    if (level === "japan") return versionedUrl.japan;
+    if (level === "japan") return mapUrls.japan;
     return null;
-  }, [level, centerPrefectureName, selectedPrefecture, versionedUrl]);
+  }, [level, centerPrefectureName, selectedPrefecture, mapUrls]);
 
   function getVisiblePrefectures(
     map: L.Map,
-    prefectureGeo: FeatureCollection<Geometry, JPProps>
+    prefectureGeo: FeatureCollection<Geometry, JPProps>,
   ): string[] {
     if (!map || !prefectureGeo) return [];
     const bounds = map.getBounds();
@@ -507,7 +534,7 @@ export default function MapPanel({
     if (
       level === "prefecture" &&
       prefectureGeo &&
-      geographyUrl === versionedUrl.prefecture
+      geographyUrl === mapUrls.prefecture
     ) {
       setGeo(prefectureGeo);
       return () => {
@@ -521,28 +548,31 @@ export default function MapPanel({
       prefectureGeo &&
       mapRef.current
     ) {
-      const visiblePrefs = getVisiblePrefectures(mapRef.current, prefectureGeo);
+      const visiblePrefs = getVisiblePrefectures(
+        mapRef.current,
+        prefectureGeo,
+      ).slice(0, MAX_PREFECTURE_DETAIL_PREFETCH);
       const uncachedPrefs = visiblePrefs.filter(
         (pref): pref is string =>
-          !!pref && detailCacheRef.current[pref] === undefined
+          !!pref && detailCacheRef.current[pref] === undefined,
       );
       Promise.all(
         uncachedPrefs.map((pref) =>
           typeof pref === "string"
-            ? fetch(versionedUrl.prefectureDetail(pref), {
-              cache: "no-store",
-              signal: controller.signal,
-            })
-              .then((res) => (res.ok ? res.json() : null))
-              .then((data) => {
-                if (!isActive || !data) return null;
-                const collection = parseMapData(data);
-                detailCacheRef.current[pref] = collection;
-                return collection;
+            ? fetch(mapUrls.prefectureDetail(pref), {
+                cache: "force-cache",
+                signal: controller.signal,
               })
-              .catch(() => null)
-            : Promise.resolve(null)
-        )
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data) => {
+                  if (!isActive || !data) return null;
+                  const collection = parseMapData(data);
+                  detailCacheRef.current[pref] = collection;
+                  return collection;
+                })
+                .catch(() => null)
+            : Promise.resolve(null),
+        ),
       ).then(() => {
         if (!isActive) return;
         const allCollections = visiblePrefs
@@ -571,7 +601,7 @@ export default function MapPanel({
       }
     }
 
-    fetch(geographyUrl, { cache: "no-store", signal: controller.signal })
+    fetch(geographyUrl, { cache: "force-cache", signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -604,8 +634,8 @@ export default function MapPanel({
     level,
     prefectureGeo,
     centerPrefectureName,
-    versionedUrl,
-    selectedPrefecture
+    mapUrls,
+    selectedPrefecture,
   ]);
 
   // --- Handlers ---
@@ -613,7 +643,7 @@ export default function MapPanel({
   const handleClick = (
     props: Record<string, unknown>,
     feature: RsmGeo,
-    layer: L.Layer
+    layer: L.Layer,
   ) => {
     if (!onPick && !onPickPref) return;
     const region = getRegionName(props);
@@ -645,18 +675,15 @@ export default function MapPanel({
         if (level === "regions") {
           targetZoom = Math.min(
             Math.max(zoom, thresholds.regionsToPrefUp + 1.0),
-            effectiveMaxZoom
+            effectiveMaxZoom,
           );
         } else if (level === "prefecture") {
           targetZoom = Math.min(
             Math.max(zoom, thresholds.prefToDetailUp + 0.5),
-            effectiveMaxZoom
+            effectiveMaxZoom,
           );
         } else if (level === "prefectureDetail") {
-          targetZoom = Math.min(
-            Math.max(zoom, 10.5),
-            effectiveMaxZoom
-          );
+          targetZoom = Math.min(Math.max(zoom, 10.5), effectiveMaxZoom);
         } else {
           // Gentler zoom increment for deep levels
           targetZoom = Math.min(zoom + 0.5, effectiveMaxZoom);
@@ -702,7 +729,7 @@ export default function MapPanel({
             // Stop propagation to avoid map generic click events if needed
             // L.DomEvent.stopPropagation(e);
           });
-        }
+        },
       }).addTo(mapRef.current);
       geoLayerRef.current = layer;
     }
@@ -727,12 +754,23 @@ export default function MapPanel({
         selectedMarkerId !== null &&
         selectedMarkerId !== undefined &&
         marker.id === selectedMarkerId;
+
+      const baseRadius = emphasizeMarkers ? 7.5 : 6;
+      const selectedRadius = emphasizeMarkers ? 10 : 8;
       const circle = L.circleMarker([marker.lat, marker.lng], {
-        radius: isSelected ? 8 : 6,
-        color: isSelected ? "#f97316" : "#2563eb",
-        fillColor: isSelected ? "#fb923c" : "#60a5fa",
-        fillOpacity: 0.9,
-        weight: 1,
+        radius: isSelected ? selectedRadius : baseRadius,
+        color: isSelected
+          ? "#f97316"
+          : emphasizeMarkers
+            ? "#1d4ed8"
+            : "#2563eb",
+        fillColor: isSelected
+          ? "#fb923c"
+          : emphasizeMarkers
+            ? "#3b82f6"
+            : "#60a5fa",
+        fillOpacity: emphasizeMarkers ? 1 : 0.9,
+        weight: emphasizeMarkers ? 1.4 : 1,
       });
       if (marker.label) {
         circle.bindTooltip(marker.label, {
@@ -741,12 +779,33 @@ export default function MapPanel({
           opacity: 0.9,
         });
       }
+
+      if (marker.label || marker.subLabel || marker.price || marker.href) {
+        const title = marker.label
+          ? `<div style="font-weight:600;color:#0f172a;font-size:13px;line-height:1.25;">${escapeHtml(marker.label)}</div>`
+          : "";
+        const subLabel = marker.subLabel
+          ? `<div style="margin-top:2px;color:#475569;font-size:12px;line-height:1.3;">${escapeHtml(marker.subLabel)}</div>`
+          : "";
+        const priceLine =
+          typeof marker.price === "number" && Number.isFinite(marker.price)
+            ? `<div style="margin-top:4px;color:#0f172a;font-size:12px;font-weight:600;">¥${Math.round(marker.price).toLocaleString()}</div>`
+            : "";
+        const link = marker.href
+          ? `<a href="${encodeURI(marker.href)}" style="display:inline-block;margin-top:6px;font-size:12px;color:#1d4ed8;text-decoration:underline;">詳細を見る</a>`
+          : "";
+
+        circle.bindPopup(
+          `<div style="min-width:150px;padding:2px 1px;">${title}${subLabel}${priceLine}${link}</div>`,
+          { closeButton: true, autoPan: true },
+        );
+      }
+
       circle.addTo(layer);
     }
     layer.addTo(map);
     markerLayerRef.current = layer;
-  }, [markers, selectedMarkerId, showMarkersAtZoom, zoom]);
-
+  }, [markers, selectedMarkerId, showMarkersAtZoom, zoom, emphasizeMarkers]);
 
   const { width = 520, height = 420 } = mapDimensions ?? {};
   const wrapperClass = mapWrapperClassName ?? "relative w-full h-full";

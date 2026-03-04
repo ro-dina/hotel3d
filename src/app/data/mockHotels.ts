@@ -1,7 +1,9 @@
 // src/data/mockHotels.ts
 import type { Hotel } from "@/types/Hotel";
+import * as WORLD_HOTELS_DATA from "@/app/data/worldHotels";
 
 type BaseCoord = { lat: number; lng: number };
+type BaseHotelInput = Omit<Hotel, "lat" | "lng">;
 
 const PREF_COORDS: Record<string, BaseCoord> = {
   北海道: { lat: 43.0642, lng: 141.3469 },
@@ -66,6 +68,68 @@ const REGION_COORDS: Record<string, BaseCoord> = {
   "四国": { lat: 33.6, lng: 133.4 },
   "九州": { lat: 32.8, lng: 130.8 },
   "沖縄": { lat: 26.2, lng: 127.7 },
+  "Europe": { lat: 54.5, lng: 15.0 },
+  "Asia": { lat: 34.5, lng: 100.0 },
+  "Africa": { lat: 1.6, lng: 17.3 },
+  "Americas": { lat: 15.0, lng: -75.0 },
+  "North America": { lat: 45.0, lng: -100.0 },
+  "South America": { lat: -15.0, lng: -58.0 },
+  "Middle East": { lat: 28.5, lng: 45.0 },
+  "Oceania": { lat: -23.0, lng: 135.0 },
+};
+
+const COUNTRY_COORDS: Record<string, BaseCoord> = {
+  GB: { lat: 54.0, lng: -2.0 },
+  FR: { lat: 46.6, lng: 2.2 },
+  IT: { lat: 41.9, lng: 12.6 },
+  ES: { lat: 40.4, lng: -3.7 },
+  DE: { lat: 51.2, lng: 10.4 },
+  NL: { lat: 52.2, lng: 5.3 },
+  US: { lat: 39.8, lng: -98.6 },
+  CA: { lat: 56.1, lng: -106.3 },
+  AU: { lat: -25.3, lng: 133.8 },
+  SG: { lat: 1.35, lng: 103.82 },
+  KR: { lat: 36.5, lng: 127.9 },
+  TW: { lat: 23.7, lng: 121.0 },
+  TH: { lat: 15.8, lng: 100.9 },
+  VN: { lat: 14.1, lng: 108.3 },
+  AE: { lat: 24.3, lng: 54.3 },
+  TR: { lat: 39.0, lng: 35.2 },
+  BR: { lat: -14.2, lng: -51.9 },
+};
+
+const WORLD_CITY_COORDS: Record<string, BaseCoord> = {
+  "london": { lat: 51.5074, lng: -0.1278 },
+  "manchester": { lat: 53.4808, lng: -2.2426 },
+  "edinburgh": { lat: 55.9533, lng: -3.1883 },
+  "paris": { lat: 48.8566, lng: 2.3522 },
+  "lyon": { lat: 45.764, lng: 4.8357 },
+  "marseille": { lat: 43.2965, lng: 5.3698 },
+  "rome": { lat: 41.9028, lng: 12.4964 },
+  "milan": { lat: 45.4642, lng: 9.19 },
+  "venice": { lat: 45.4408, lng: 12.3155 },
+  "madrid": { lat: 40.4168, lng: -3.7038 },
+  "barcelona": { lat: 41.3851, lng: 2.1734 },
+  "berlin": { lat: 52.52, lng: 13.405 },
+  "munich": { lat: 48.1351, lng: 11.582 },
+  "amsterdam": { lat: 52.3676, lng: 4.9041 },
+  "new york": { lat: 40.7128, lng: -74.006 },
+  "los angeles": { lat: 34.0522, lng: -118.2437 },
+  "san francisco": { lat: 37.7749, lng: -122.4194 },
+  "seattle": { lat: 47.6062, lng: -122.3321 },
+  "toronto": { lat: 43.6532, lng: -79.3832 },
+  "vancouver": { lat: 49.2827, lng: -123.1207 },
+  "sydney": { lat: -33.8688, lng: 151.2093 },
+  "melbourne": { lat: -37.8136, lng: 144.9631 },
+  "singapore": { lat: 1.3521, lng: 103.8198 },
+  "seoul": { lat: 37.5665, lng: 126.978 },
+  "busan": { lat: 35.1796, lng: 129.0756 },
+  "taipei": { lat: 25.033, lng: 121.5654 },
+  "bangkok": { lat: 13.7563, lng: 100.5018 },
+  "ho chi minh city": { lat: 10.8231, lng: 106.6297 },
+  "dubai": { lat: 25.2048, lng: 55.2708 },
+  "istanbul": { lat: 41.0082, lng: 28.9784 },
+  "sao paulo": { lat: -23.5505, lng: -46.6333 },
 };
 
 const JITTER_LAT = 0.25;
@@ -91,28 +155,253 @@ const mulberry32 = (seed: number) => {
   };
 };
 
-const getBaseCoord = (pref?: string, region?: string): BaseCoord => {
-  if (pref && PREF_COORDS[pref]) {
-    return PREF_COORDS[pref];
+const getBaseCoord = (hotel: BaseHotelInput): BaseCoord => {
+  const cityKey = String(hotel.city ?? "").trim().toLowerCase();
+  if (cityKey && WORLD_CITY_COORDS[cityKey]) {
+    return WORLD_CITY_COORDS[cityKey];
   }
-  if (region && REGION_COORDS[region]) {
-    return REGION_COORDS[region];
+
+  if (hotel.pref && PREF_COORDS[hotel.pref]) {
+    return PREF_COORDS[hotel.pref];
   }
+
+  if (hotel.admin1 && PREF_COORDS[hotel.admin1]) {
+    return PREF_COORDS[hotel.admin1];
+  }
+
+  if (hotel.region && REGION_COORDS[hotel.region]) {
+    return REGION_COORDS[hotel.region];
+  }
+
+  if (hotel.countryCode && COUNTRY_COORDS[hotel.countryCode]) {
+    return COUNTRY_COORDS[hotel.countryCode];
+  }
+
   return { lat: 36.2048, lng: 138.2529 };
 };
 
-const deriveLatLng = (hotel: Omit<Hotel, "lat" | "lng">): BaseCoord => {
+const deriveLatLng = (hotel: BaseHotelInput): BaseCoord => {
   const seed = hashString(
-    `${hotel.id}-${hotel.pref ?? ""}-${hotel.region ?? ""}-${hotel.name}`
+    `${hotel.id}-${hotel.countryCode ?? ""}-${hotel.pref ?? ""}-${hotel.admin1 ?? ""}-${hotel.city ?? ""}-${hotel.region ?? ""}-${hotel.name}`
   );
   const rand = mulberry32(seed);
-  const base = getBaseCoord(hotel.pref, hotel.region);
+  const base = getBaseCoord(hotel);
   const latOffset = (rand() - 0.5) * JITTER_LAT;
   const lngOffset = (rand() - 0.5) * JITTER_LNG;
   return {
     lat: base.lat + latOffset,
     lng: base.lng + lngOffset,
   };
+};
+
+const parseWorldHotelId = (rawId: unknown, fallbackIndex: number): number => {
+  if (typeof rawId === "number" && Number.isFinite(rawId)) {
+    return 300000 + Math.trunc(rawId);
+  }
+  if (typeof rawId === "string") {
+    const matched = rawId.match(/\d+/);
+    if (matched) {
+      return 300000 + Number(matched[0]);
+    }
+  }
+  return 350000 + fallbackIndex;
+};
+
+const normalizeWorldType = (rawType: unknown): BaseHotelInput["type"] => {
+  const normalized = String(rawType ?? "").trim().toLowerCase();
+  if (
+    normalized.includes("apartment") ||
+    normalized.includes("guesthouse") ||
+    normalized.includes("hostel") ||
+    normalized.includes("house") ||
+    normalized.includes("villa") ||
+    normalized.includes("minpaku")
+  ) {
+    return "minpaku";
+  }
+  return "hotel";
+};
+
+const toBooleanWithFallback = (
+  rawValue: unknown,
+  fallbackSeed: string,
+): boolean => {
+  if (typeof rawValue === "boolean") return rawValue;
+  return hashString(fallbackSeed) % 2 === 0;
+};
+
+const normalizeWorldHotel = (
+  input: Record<string, unknown>,
+  index: number,
+): BaseHotelInput => {
+  const id = parseWorldHotelId(input.id, index + 1);
+  const name =
+    typeof input.name === "string" && input.name.trim().length > 0
+      ? input.name.trim()
+      : `World Hotel ${id}`;
+  const countryCodeRaw =
+    typeof input.countryCode === "string" && input.countryCode.trim().length > 0
+      ? input.countryCode.trim().toUpperCase()
+      : "UN";
+  const country =
+    typeof input.country === "string" && input.country.trim().length > 0
+      ? input.country.trim()
+      : countryCodeRaw;
+  const city =
+    typeof input.city === "string" && input.city.trim().length > 0
+      ? input.city.trim()
+      : "Unknown City";
+  const pref =
+    typeof input.pref === "string" && input.pref.trim().length > 0
+      ? input.pref.trim()
+      : city;
+  const region =
+    typeof input.region === "string" && input.region.trim().length > 0
+      ? input.region.trim()
+      : "Global";
+  const admin1 =
+    typeof input.admin1 === "string" && input.admin1.trim().length > 0
+      ? input.admin1.trim()
+      : country;
+  const district =
+    typeof input.district === "string" && input.district.trim().length > 0
+      ? input.district.trim()
+      : `${city} Center`;
+  const rawPrice = Number(input.price);
+  const normalizedPrice = Number.isFinite(rawPrice)
+    ? rawPrice < 2000
+      ? Math.round(rawPrice * 100)
+      : Math.round(rawPrice)
+    : 9000 + ((id * 137) % 24000);
+
+  const aliases = Array.isArray(input.searchAliases)
+    ? input.searchAliases
+        .map((value) => (typeof value === "string" ? value.trim() : ""))
+        .filter((value): value is string => value.length > 0)
+    : [];
+
+  const description =
+    typeof input.description === "string" && input.description.trim().length > 0
+      ? input.description.trim()
+      : `${city}にあるデモ用ホテル。世界各地の検索と地図表示テストに対応。`;
+
+  return {
+    id,
+    name,
+    description,
+    price: normalizedPrice,
+    available: toBooleanWithFallback(input.available, `${id}-available`),
+    region,
+    pref,
+    admin1,
+    city,
+    countryCode: countryCodeRaw,
+    country,
+    district,
+    searchAliases: Array.from(new Set([city, country, ...aliases])),
+    type: normalizeWorldType(input.type),
+    breakfast: toBooleanWithFallback(input.breakfast, `${id}-breakfast`),
+    imageUrl:
+      typeof input.imageUrl === "string" && input.imageUrl.trim().length > 0
+        ? input.imageUrl.trim()
+        : "/images/hotel_placeholder.png",
+  };
+};
+
+type OverseasCityTemplate = {
+  countryCode: string;
+  country: string;
+  city: string;
+  admin1?: string;
+  region: string;
+  aliases: string[];
+  motifs: string[];
+};
+
+const OVERSEAS_CITY_TEMPLATES: OverseasCityTemplate[] = [
+  { countryCode: "GB", country: "United Kingdom", city: "London", region: "Europe", aliases: ["london", "ロンドン"], motifs: ["テムズ川", "ビッグ・ベン", "シャーロック・ホームズ"] },
+  { countryCode: "GB", country: "United Kingdom", city: "Manchester", region: "Europe", aliases: ["manchester", "マンチェスター"], motifs: ["音楽シーン", "産業遺産", "フットボール"] },
+  { countryCode: "FR", country: "France", city: "Paris", region: "Europe", aliases: ["paris", "パリ"], motifs: ["セーヌ川", "アート", "カフェ文化"] },
+  { countryCode: "IT", country: "Italy", city: "Rome", region: "Europe", aliases: ["rome", "ローマ"], motifs: ["古代遺跡", "石畳", "トラットリア"] },
+  { countryCode: "ES", country: "Spain", city: "Barcelona", region: "Europe", aliases: ["barcelona", "バルセロナ"], motifs: ["ガウディ建築", "地中海", "サッカー文化"] },
+  { countryCode: "DE", country: "Germany", city: "Berlin", region: "Europe", aliases: ["berlin", "ベルリン"], motifs: ["現代アート", "歴史地区", "クラフトカルチャー"] },
+  { countryCode: "US", country: "United States", city: "New York", admin1: "New York", region: "North America", aliases: ["new york", "ニューヨーク", "nyc"], motifs: ["ブロードウェイ", "摩天楼", "ジャズバー"] },
+  { countryCode: "US", country: "United States", city: "Los Angeles", admin1: "California", region: "North America", aliases: ["los angeles", "ロサンゼルス", "la"], motifs: ["映画文化", "サンタモニカ", "アート地区"] },
+  { countryCode: "CA", country: "Canada", city: "Toronto", region: "North America", aliases: ["toronto", "トロント"], motifs: ["湖畔", "多文化フード", "高層展望"] },
+  { countryCode: "AU", country: "Australia", city: "Sydney", region: "Oceania", aliases: ["sydney", "シドニー"], motifs: ["オペラハウス", "ハーバー", "サーフカルチャー"] },
+  { countryCode: "SG", country: "Singapore", city: "Singapore", region: "Asia", aliases: ["singapore", "シンガポール"], motifs: ["ガーデンズ", "ホーカー文化", "ウォーターフロント"] },
+  { countryCode: "KR", country: "Korea", city: "Seoul", region: "Asia", aliases: ["seoul", "ソウル"], motifs: ["韓屋", "ナイトマーケット", "デザインストリート"] },
+  { countryCode: "TW", country: "Taiwan", city: "Taipei", region: "Asia", aliases: ["taipei", "台北"], motifs: ["夜市", "山並み", "茶文化"] },
+  { countryCode: "TH", country: "Thailand", city: "Bangkok", region: "Asia", aliases: ["bangkok", "バンコク"], motifs: ["運河", "寺院群", "ルーフトップバー"] },
+  { countryCode: "AE", country: "UAE", city: "Dubai", region: "Middle East", aliases: ["dubai", "ドバイ"], motifs: ["砂漠体験", "未来建築", "マリーナ"] },
+  { countryCode: "TR", country: "Turkey", city: "Istanbul", region: "Middle East", aliases: ["istanbul", "イスタンブール"], motifs: ["ボスポラス海峡", "旧市街", "バザール"] },
+  { countryCode: "BR", country: "Brazil", city: "Sao Paulo", region: "South America", aliases: ["sao paulo", "サンパウロ"], motifs: ["ストリートアート", "カフェ文化", "都市公園"] },
+];
+
+const OVERSEAS_NAME_PREFIXES = [
+  "Grand",
+  "Harbor",
+  "Skyline",
+  "Heritage",
+  "Riverside",
+  "Boutique",
+  "Royal",
+  "Urban",
+  "Gallery",
+  "Crescent",
+  "Lantern",
+  "Voyager",
+];
+
+const OVERSEAS_TYPE_ROTATION: Array<"hotel" | "minpaku"> = [
+  "hotel",
+  "hotel",
+  "minpaku",
+];
+
+const generateOverseasHotels = (
+  startId: number,
+  countPerCity: number,
+): BaseHotelInput[] => {
+  let nextId = startId;
+  const generated: BaseHotelInput[] = [];
+
+  for (const cityTemplate of OVERSEAS_CITY_TEMPLATES) {
+    for (let index = 0; index < countPerCity; index += 1) {
+      const motif = cityTemplate.motifs[index % cityTemplate.motifs.length];
+      const prefix =
+        OVERSEAS_NAME_PREFIXES[(index + cityTemplate.city.length) % OVERSEAS_NAME_PREFIXES.length];
+      const propertyLabel =
+        index % 5 === 0
+          ? "Residency"
+          : index % 3 === 0
+            ? "Suites"
+            : "Hotel";
+
+      generated.push({
+        id: nextId,
+        name: `${cityTemplate.city} ${prefix} ${propertyLabel}`,
+        description: `${cityTemplate.city}の${motif}に着想を得たデモ向けホテル。ローカル体験と快適な滞在を両立。`,
+        price: 9000 + ((nextId * 137) % 24000),
+        available: nextId % 7 !== 0,
+        region: cityTemplate.region,
+        pref: cityTemplate.admin1 ?? cityTemplate.city,
+        admin1: cityTemplate.admin1,
+        city: cityTemplate.city,
+        countryCode: cityTemplate.countryCode,
+        country: cityTemplate.country,
+        district: `${cityTemplate.city} Center`,
+        searchAliases: cityTemplate.aliases,
+        type: OVERSEAS_TYPE_ROTATION[index % OVERSEAS_TYPE_ROTATION.length],
+        breakfast: nextId % 2 === 0,
+        imageUrl: "/images/hotel_placeholder.png",
+      });
+
+      nextId += 1;
+    }
+  }
+
+  return generated;
 };
 
 // page.tsx が import している名前に合わせて HOTELS をエクスポート
@@ -5338,7 +5627,35 @@ const RAW_HOTELS: Array<Omit<Hotel, "lat" | "lng">> = [
   }
 ];
 
-export const HOTELS: Hotel[] = RAW_HOTELS.map((hotel) => ({
-  ...hotel,
-  ...deriveLatLng(hotel),
-}));
+const OVERSEAS_HOTELS = generateOverseasHotels(1001, 26);
+const WORLD_HOTELS: BaseHotelInput[] = Object.values(WORLD_HOTELS_DATA)
+  .flatMap((value) =>
+    Array.isArray(value) ? (value as Record<string, unknown>[]) : [],
+  )
+  .map((item, index) => normalizeWorldHotel(item, index));
+
+const ALL_RAW_HOTELS: BaseHotelInput[] = [
+  ...RAW_HOTELS,
+  ...OVERSEAS_HOTELS,
+  ...WORLD_HOTELS,
+];
+
+export const HOTELS: Hotel[] = ALL_RAW_HOTELS.map((hotel) => {
+  const countryCode = (hotel.countryCode ?? "JP").toUpperCase();
+  const country =
+    hotel.country && hotel.country.trim().length > 0
+      ? hotel.country
+      : countryCode === "JP"
+        ? "Japan"
+        : countryCode;
+  const normalizedHotel: BaseHotelInput = {
+    ...hotel,
+    countryCode,
+    country,
+  };
+
+  return {
+    ...normalizedHotel,
+    ...deriveLatLng(normalizedHotel),
+  };
+});

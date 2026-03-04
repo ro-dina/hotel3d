@@ -60,6 +60,5 @@ export const IMAGE_LIST = [
   "/images/9251af03-7b3e-434b-aef2-5a09866f896a.jpg",
   "/images/31875ccb-bda2-4ef3-8f34-6a6d6f29d8ac.jpg",
   "/images/40017f8f-7944-41ae-9b82-e8c483051c59.jpg",
-  "/images/41753cc2-d159-4c38-9ae2-9408f8b7b3f5.jpg",
-  "/images/44790b43-45eb-484b-a5e3-bfffb2934b62.jpg"
+  "/images/41753cc2-d159-4c38-9ae2-9408f8b7b3f5.jpg"
 ];
