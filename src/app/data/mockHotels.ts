@@ -337,7 +337,7 @@ const generateWeirdOffset = (
     case 2: {
       const side = rand() < 0.5 ? -1 : 1;
       const theta = side * (Math.PI * 0.5) + (rand() - 0.5) * 1.5;
-      const radius = 0.15 + core * 0.95;
+      const radius = Math.pow(rand(), RADIAL_EDGE_FALLOFF_POWER + 0.8);
       return {
         latOffset: Math.cos(theta) * latRadius * radius,
         lngOffset: Math.sin(theta) * lngRadius * radius,
@@ -345,10 +345,10 @@ const generateWeirdOffset = (
     }
     case 3: {
       const axis = (rand() - 0.5) * Math.PI;
-      const longitudinal = (rand() - 0.5) * 0.24;
-      const lateral = (rand() - 0.5) * 0.1;
-      const outward = Math.sign(longitudinal || 1) * Math.pow(rand(), 3.8) * 0.88;
-      const x = longitudinal + outward;
+      const radial = Math.pow(rand(), RADIAL_EDGE_FALLOFF_POWER + 1.1);
+      const longitudinal = (rand() - 0.5) * radial * 1.55;
+      const lateral = (rand() - 0.5) * radial * 0.82;
+      const x = longitudinal;
       const y = lateral;
       const cosA = Math.cos(axis);
       const sinA = Math.sin(axis);
@@ -360,10 +360,8 @@ const generateWeirdOffset = (
       };
     }
     default: {
-      const ringWeight = rand() < 0.22;
-      const radius = ringWeight
-        ? 0.75 + Math.pow(rand(), 2.4) * 0.25
-        : Math.pow(rand(), RADIAL_EDGE_FALLOFF_POWER + 0.9);
+      const rimTexture = 0.75 + 0.25 * Math.abs(Math.sin(angle * 3));
+      const radius = Math.pow(rand(), RADIAL_EDGE_FALLOFF_POWER + 1.2) * rimTexture;
       return {
         latOffset: Math.cos(angle) * latRadius * radius,
         lngOffset: Math.sin(angle) * lngRadius * radius,
@@ -673,6 +671,8 @@ const URBAN_PROPERTY_SUFFIXES = [
   "Stay",
 ];
 
+const MAX_POPULATION_SEED_HOTELS = 100000;
+
 const clampNumber = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
 
@@ -685,8 +685,8 @@ const populationToClusterCount = (populationRaw: number): number => {
   const ratio =
     (Math.log10(population) - Math.log10(minPop)) /
     (Math.log10(maxPop) - Math.log10(minPop));
-  const scaled = 20 + clampNumber(ratio, 0, 1) * (500 - 20);
-  return clampNumber(Math.round(scaled), 20, 500);
+  const scaled = 14 + clampNumber(ratio, 0, 1) * (220 - 14);
+  return clampNumber(Math.round(scaled), 14, 220);
 };
 
 const generatePopulationSeedHotels = (
@@ -697,6 +697,7 @@ const generatePopulationSeedHotels = (
   const generated: BaseHotelInput[] = [];
 
   for (const seed of seeds) {
+    if (generated.length >= MAX_POPULATION_SEED_HOTELS) break;
     const count = populationToClusterCount(seed.population);
     const aliases = Array.from(
       new Set([
@@ -709,6 +710,7 @@ const generatePopulationSeedHotels = (
     );
 
     for (let index = 0; index < count; index += 1) {
+      if (generated.length >= MAX_POPULATION_SEED_HOTELS) break;
       const prefix =
         URBAN_NAME_PREFIXES[(index + seed.city.length) % URBAN_NAME_PREFIXES.length];
       const suffix =
