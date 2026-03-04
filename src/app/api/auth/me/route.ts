@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { decryptText } from "@/lib/secure";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -25,6 +26,8 @@ export async function GET() {
       cardHolder: user.cardHolder,
       cardExpMonth: user.cardExpMonth,
       cardExpYear: user.cardExpYear,
+      // デモ用途: ログイン本人に限って復号して返す
+      cardNumber: user.cardEncrypted ? decryptText(user.cardEncrypted) : null,
     },
   });
 }

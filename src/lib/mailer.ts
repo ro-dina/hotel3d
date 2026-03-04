@@ -1,5 +1,3 @@
-import nodemailer from "nodemailer";
-
 type ReservationMail = {
   to: string;
   guestName: string;
@@ -9,46 +7,43 @@ type ReservationMail = {
   total: number;
 };
 
-function hasSmtpConfig() {
-  return Boolean(
-    process.env.SMTP_HOST &&
-      process.env.SMTP_PORT &&
-      process.env.SMTP_USER &&
-      process.env.SMTP_PASS &&
-      process.env.SMTP_FROM
-  );
+function hasResendConfig() {
+  return Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
 }
 
 export async function sendReservationMail(input: ReservationMail) {
-  if (!hasSmtpConfig()) {
-    return { sent: false, reason: "smtp_not_configured" as const };
+  if (!hasResendConfig()) {
+    return { sent: false, reason: "resend_not_configured" as const };
   }
 
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST!,
-    port: Number(process.env.SMTP_PORT!),
-    secure: Number(process.env.SMTP_PORT!) === 465,
-    auth: {
-      user: process.env.SMTP_USER!,
-      pass: process.env.SMTP_PASS!,
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY!}`,
+      "Content-Type": "application/json",
     },
+    body: JSON.stringify({
+      from: process.env.MAIL_FROM!,
+      to: [input.to],
+      subject: `【予約確認】${input.hotelName}`,
+      text: [
+        `${input.guestName} 様`,
+        "",
+        `${input.hotelName} のご予約ありがとうございます。`,
+        `チェックイン: ${input.checkIn}`,
+        `チェックアウト: ${input.checkOut}`,
+        `ご請求予定額: ¥${input.total.toLocaleString()}`,
+        "",
+        "このメールは自動送信です。",
+      ].join("\n"),
+    }),
   });
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM!,
-    to: input.to,
-    subject: `【予約確認】${input.hotelName}`,
-    text: [
-      `${input.guestName} 様`,
-      "",
-      `${input.hotelName} のご予約ありがとうございます。`,
-      `チェックイン: ${input.checkIn}`,
-      `チェックアウト: ${input.checkOut}`,
-      `ご請求予定額: ¥${input.total.toLocaleString()}`,
-      "",
-      "このメールは自動送信です。",
-    ].join("\n"),
-  });
+  if (!response.ok) {
+    const body = await response.text();
+    console.error("[mail] resend send failed:", response.status, body);
+    return { sent: false, reason: "resend_send_failed" as const };
+  }
 
   return { sent: true as const };
 }

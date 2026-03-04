@@ -112,6 +112,7 @@ export default function ReserveClient({
           addressLine1: prev.addressLine1 || u.addressLine1 || "",
           addressLine2: prev.addressLine2 || u.addressLine2 || "",
           cardHolder: prev.cardHolder || u.cardHolder || "",
+          cardNumber: prev.cardNumber || u.cardNumber || "",
           cardExpMonth: prev.cardExpMonth || (u.cardExpMonth ? String(u.cardExpMonth) : ""),
           cardExpYear: prev.cardExpYear || (u.cardExpYear ? String(u.cardExpYear) : ""),
         }));

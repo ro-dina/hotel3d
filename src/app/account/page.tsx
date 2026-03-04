@@ -20,6 +20,19 @@ type User = {
   cardHolder?: string | null;
   cardExpMonth?: number | null;
   cardExpYear?: number | null;
+  cardNumber?: string | null;
+};
+
+type ReservationItem = {
+  id: number;
+  hotelId: number;
+  guests: number;
+  checkIn: string | null;
+  checkOut: string | null;
+  nights: number;
+  total: number;
+  createdAt: string;
+  cardLast4: string | null;
 };
 
 export default function AccountPage() {
@@ -48,6 +61,7 @@ export default function AccountPage() {
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [reservations, setReservations] = useState<ReservationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -75,8 +89,15 @@ export default function AccountPage() {
         setBodyWidthPercent(json.user.bodyWidthPercent ?? 100);
 
         setCardHolder(json.user.cardHolder ?? "");
+        setCardNumber(json.user.cardNumber ?? "");
         setCardExpMonth(json.user.cardExpMonth ? String(json.user.cardExpMonth) : "");
         setCardExpYear(json.user.cardExpYear ? String(json.user.cardExpYear) : "");
+
+        const r = await fetch("/api/account/reservations", { cache: "no-store" });
+        const rj = await r.json();
+        if (r.ok && Array.isArray(rj?.reservations)) {
+          setReservations(rj.reservations);
+        }
       } finally {
         setLoading(false);
       }
@@ -123,7 +144,7 @@ export default function AccountPage() {
 
     setUser(json.user);
     setPassword("");
-    setCardNumber("");
+    setCardNumber(json.user.cardNumber ?? cardNumber);
     setCardCvc("");
     setMessage("アカウント情報を更新しました");
   };
@@ -224,6 +245,33 @@ export default function AccountPage() {
           <button type="button" onClick={logout} className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg py-3 font-semibold">ログアウト</button>
         </div>
       </form>
+
+      <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <h2 className="text-lg font-semibold mb-4">予約履歴</h2>
+        {reservations.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">まだ予約はありません。</p>
+        ) : (
+          <div className="space-y-3">
+            {reservations.map((r) => (
+              <div key={r.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <p className="font-semibold">予約ID: {r.id} / Hotel #{r.hotelId}</p>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    {r.checkIn?.slice(0, 10)} - {r.checkOut?.slice(0, 10)} / {r.guests}名 / {r.nights}泊
+                  </p>
+                  <p className="text-gray-500 dark:text-gray-400">作成: {new Date(r.createdAt).toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-lg">¥{Number(r.total).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    カード: {r.cardLast4 ? `****${r.cardLast4}` : "-"}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <style jsx>{`
         .field {
