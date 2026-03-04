@@ -1,18 +1,10 @@
 "use client";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 export default function Header() {
-  const router = useRouter();
-  const sp = useSearchParams();
-  const [q, setQ] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setQ(sp.get("q") ?? "");
-  }, [sp]);
 
   useEffect(() => {
     const stored = localStorage.getItem("theme");
@@ -26,14 +18,6 @@ export default function Header() {
     setMounted(true);
   }, []);
 
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const u = new URL(window.location.href);
-    if (q) u.searchParams.set("q", q);
-    else u.searchParams.delete("q");
-    router.push(u.pathname + "?" + u.searchParams.toString());
-  };
-
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
@@ -43,7 +27,7 @@ export default function Header() {
 
   return (
     // h-16で高さを固定
-    <header className="sticky top-0 z-50 h-16 border-b border-[var(--border)] bg-[var(--header)] backdrop-blur flex items-center">
+    <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-[var(--border)] bg-[var(--header)] backdrop-blur flex items-center">
       <div className="w-full max-w-6xl mx-auto px-4 flex items-center justify-between">
         
         {/* 左側：ロゴとナビゲーション */}
@@ -56,28 +40,17 @@ export default function Header() {
           <nav className="text-sm text-[var(--muted-foreground)] flex gap-3 whitespace-nowrap">
             <Link href="/">ホーム</Link>
             <Link href="/about">このサイトについて</Link>
+            <Link href="/login">ログイン</Link>
+            <Link href="/account">アカウント</Link>
           </nav>
         </div>
 
-        {/* 中央エリア：注釈テキスト ＋ GitHubリンク */}
-        {/* flexで横並びにする。親要素で余白を調整 */}
-        <div className="flex-1 flex items-center justify-center gap-4 mx-2 min-w-0">
-          
-          {/* 1. 注釈テキスト (div) */}
-          <div className="text-[10px] sm:text-xs text-[var(--muted-foreground)] truncate text-center">
-            {/* スマホ用テキスト */}
-            <span className="block sm:hidden">※全て架空です</span>
-            {/* PC用テキスト */}
-            <span className="hidden sm:block">全てのホテルや値、情報は完全に架空のものであり、現存する何かと一切の関係がありません</span>
-          </div>
-
-          {/* 2. GitHubリンク (div) - PCのみ表示 */}
+        <div className="flex-1 flex items-center justify-center mx-2 min-w-0">
           <div className="hidden sm:block text-[10px] sm:text-xs text-[var(--muted-foreground)] whitespace-nowrap">
             <a href="https://github.com/ro-dina/hotel3d" target="_blank" rel="noopener noreferrer" className="hover:underline">
               GitHub開発リポジトリ
             </a>
           </div>
-
         </div>
 
         {/* 右側：テーマ切り替え */}

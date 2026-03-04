@@ -34,7 +34,14 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <Header />
         </Suspense>
-        <main className="min-h-screen w-full">{children}</main>
+        <main className="min-h-screen w-full pt-16">
+          <div className="w-full border-b border-[var(--border)] bg-[var(--surface-alt)]">
+            <div className="max-w-6xl mx-auto px-4 py-2 text-xs text-[var(--muted-foreground)]">
+              全てのホテルや値、情報は完全に架空のものであり、現存する何かと一切の関係がありません。
+            </div>
+          </div>
+          {children}
+        </main>
         <ChatWidget />
       </body>
     </html>

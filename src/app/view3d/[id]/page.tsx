@@ -38,6 +38,23 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
   };
 
   useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        if (!res.ok) return;
+        const json = await res.json();
+        const h = Number(json?.user?.heightCm);
+        const w = Number(json?.user?.bodyWidthPercent);
+        if (Number.isFinite(h)) setHeightCm(Math.max(120, Math.min(220, Math.round(h))));
+        if (Number.isFinite(w)) setBodyWidthPercent(Math.max(70, Math.min(140, Math.round(w))));
+      } catch {
+        // ignore
+      }
+    };
+    void loadProfile();
+  }, []);
+
+  useEffect(() => {
     const isMobile = detectMobile();
     const frameEl = frameRef.current; // cleanup 用に退避
 

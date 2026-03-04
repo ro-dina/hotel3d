@@ -9,6 +9,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
+
 // prisma/schema.prisma
 model Hotel {
   id          Int      @id @default(autoincrement())
@@ -26,4 +30,33 @@ model Reservation {
   name      String
   email     String
   createdAt DateTime @default(now())
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  name         String
+  passwordHash String
+  bookingEmail String?
+  phone        String?
+  address      String?
+  heightCm     Int       @default(170)
+  bodyWidthPercent Int   @default(100)
+  cardEncrypted String?
+  cardLast4    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  tokenHash    String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
