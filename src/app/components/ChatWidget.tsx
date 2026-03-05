@@ -4,6 +4,12 @@ import { useMemo, useRef, useState } from "react";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
+const EXAMPLE_QUESTIONS = [
+  "3Dビューの操作方法を教えて",
+  "予約までの流れを教えて",
+  "アカウント情報の保存方法を教えて",
+];
+
 const SYSTEM_HELP = `
 あなたは、ホテル予約Webアプリの操作をサポートするナビゲーションAIです。
 ユーザーの質問に対し、**簡潔な箇条書き**を用いて具体的な操作手順を案内してください。
@@ -31,17 +37,21 @@ export default function ChatWidget() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "こんにちは！このサイトの使い方を案内できます。何をしたいですか？" },
+    {
+      role: "assistant",
+      content:
+        "こんにちは！このサイトの使い方を案内できます。何をしたいですか？\n\n例えばこんなことができます\n- 3Dビューの操作方法を教えて\n- 予約までの流れを教えて\n- アカウント情報の保存方法を教えて",
+    },
   ]);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const canSend = useMemo(() => input.trim().length > 0 && !busy, [input, busy]);
 
-  async function send() {
-    if (!canSend) return;
-    const text = input.trim();
-    setInput("");
+  async function send(textOverride?: string) {
+    const text = (textOverride ?? input).trim();
+    if (!text || busy) return;
+    if (!textOverride) setInput("");
 
     const next: Msg[] = [...messages, { role: "user" as const, content: text }];
     setMessages(next);
@@ -116,10 +126,24 @@ export default function ChatWidget() {
                       : "max-w-[85%] rounded-2xl px-3 py-2 bg-gray-100 text-gray-900"
                   }
                 >
-                  {m.content}
+                  <span className="whitespace-pre-line">{m.content}</span>
                 </div>
               </div>
             ))}
+            {!busy && messages.length === 1 && (
+              <div className="pt-1 space-y-1">
+                {EXAMPLE_QUESTIONS.map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-left text-xs text-gray-700 transition hover:bg-gray-50"
+                    onClick={() => void send(q)}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
 
@@ -136,7 +160,7 @@ export default function ChatWidget() {
             />
             <button
               className="px-3 py-2 rounded-xl bg-black text-white text-sm disabled:opacity-50"
-              onClick={send}
+              onClick={() => void send()}
               disabled={!canSend}
             >
               送信

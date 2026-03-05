@@ -5,7 +5,9 @@
   "homepage": "https://github.com/ro-dina/hotel3d",
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma generate && prisma db push && next build",
+    "build": "next build",
+    "db:push": "prisma db push",
+    "build:with-db": "prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
