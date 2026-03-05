@@ -1326,7 +1326,7 @@ export default function HomePage() {
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="rounded-lg border border-indigo-300 bg-indigo-500/20 px-3 py-1.5 text-sm font-semibold text-indigo-100 transition hover:bg-indigo-500/30"
+                    className="rounded-lg border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-indigo-700 dark:border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-100 dark:hover:bg-indigo-500/30"
                   >
                     検索
                   </button>
