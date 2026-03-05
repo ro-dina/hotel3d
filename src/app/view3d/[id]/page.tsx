@@ -1,5 +1,6 @@
 "use client";
 import { use, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 // Next.js 15+ では params は Promise
 type RouteParams = { id: string };
@@ -146,6 +147,15 @@ export default function Page({ params }: { params: Promise<RouteParams> }) {
         </div>
 
         <aside className="border border-gray-200 dark:border-gray-700 rounded p-4 space-y-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+          <div className="space-y-2">
+            <Link
+              href={`/reserve/${id}`}
+              className="block w-full rounded-lg border border-indigo-600 bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white transition hover:bg-indigo-700"
+            >
+              このホテルを予約する
+            </Link>
+          </div>
+
           <h2 className="text-lg font-semibold">身長設定</h2>
           <p className="text-sm text-gray-600 dark:text-gray-300">
             身長は縦横比を保って変化します。体型は腹囲スライダーで横幅だけ調整できます。
