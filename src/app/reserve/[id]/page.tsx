@@ -1,9 +1,7 @@
 import { HOTELS } from "@/app/data/mockHotels";
 import ReserveClient from "./ReserveClient";
 
-export async function generateStaticParams() {
-  return HOTELS.map((h) => ({ id: String(h.id) }));
-}
+export const dynamic = "force-dynamic";
 
 // Next.js 15以降: params と searchParams は Promise 型になります
 type PageProps = {

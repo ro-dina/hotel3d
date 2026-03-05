@@ -118,8 +118,10 @@ const pickGalleryImages = (
 // -----------------------------------------------------------------------------
 
 export async function generateStaticParams() {
-  return HOTELS.map((h) => ({ id: String(h.id) }));
+  return [];
 }
+
+export const dynamic = "force-dynamic";
 
 type RouteParams = { id: string };
 
